@@ -1,0 +1,113 @@
+.navbar {
+  height: 60px;
+  background-color: #ffffff;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+/* LEFT LOGO AREA */
+.navbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: #000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.5px;
+}
+
+.logo-icon {
+  color: #FF0000;
+  /* Brand color */
+  font-size: 1.8rem;
+}
+
+/* RIGHT ACTIONS AREA */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-icon-btn {
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  text-decoration: none;
+}
+
+.nav-icon-btn:hover {
+  background: #f0f0f0;
+}
+
+.nav-user-info {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #333;
+}
+
+.nav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.logout-icon-btn {
+  background: transparent;
+  border: none;
+  color: #333;
+  /* Less aggressive than red btn */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.logout-icon-btn:hover {
+  background: #ffe6e6;
+  color: #d32f2f;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 16px;
+  }
+
+  .navbar-right {
+    gap: 12px;
+  }
+
+  .logo span {
+    display: none;
+    /* Hide text on small mobile if needed, or keep it */
+  }
+
+  .logo-icon {
+    font-size: 2rem;
+  }
+}

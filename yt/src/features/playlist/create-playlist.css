@@ -1,0 +1,63 @@
+/* Reusing existing playlist-modal styles, adding specific form styles */
+
+.create-playlist-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.cancel-btn {
+    background: transparent;
+    border: none;
+    color: #606060;
+    cursor: pointer;
+    font-weight: 600;
+    padding: 8px 16px;
+}
+
+.cancel-btn:hover {
+    color: #0f0f0f;
+}
+
+.create-btn {
+    background: #0f0f0f;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.create-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}

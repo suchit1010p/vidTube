@@ -1,0 +1,28 @@
+.layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-body {
+  flex: 1;
+  display: flex;
+  background-color: #f9f9f9;
+}
+
+.layout-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .layout-body {
+    flex-direction: column;
+  }
+
+  /* Add padding to bottom so content isn't hidden behind fixed bottom nav */
+  .layout-content {
+    padding-bottom: 80px;
+  }
+}

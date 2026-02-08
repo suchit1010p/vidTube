@@ -1,0 +1,252 @@
+.playlist-page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 32px;
+  min-height: 80vh;
+}
+
+/* SIDEBAR */
+.playlist-sidebar {
+  position: sticky;
+  top: 80px;
+  /* Offset for navbar */
+  height: max-content;
+  background: linear-gradient(180deg, rgba(240, 240, 240, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
+  padding: 24px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.playlist-cover-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.playlist-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.playlist-cover-wrapper:hover .playlist-cover-img {
+  transform: scale(1.05);
+}
+
+.playlist-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.playlist-cover-wrapper:hover .playlist-overlay {
+  opacity: 1;
+}
+
+.playlist-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  color: #0f0f0f;
+  line-height: 1.2;
+}
+
+.playlist-meta {
+  font-size: 0.9rem;
+  color: #606060;
+  display: flex;
+  gap: 8px;
+}
+
+.playlist-description {
+  font-size: 0.95rem;
+  color: #606060;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.delete-playlist-btn {
+  margin-top: auto;
+  background-color: #ffeaea;
+  color: #cc0000;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.delete-playlist-btn:hover {
+  background-color: #ffcccc;
+}
+
+
+/* VIDEO LIST (RIGHT SIDE) */
+.playlist-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.playlist-video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.playlist-video-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.playlist-video-row:hover {
+  background: #f2f2f2;
+}
+
+.video-index {
+  font-size: 0.9rem;
+  color: #606060;
+  width: 24px;
+  text-align: center;
+}
+
+.video-thumb-wrapper {
+  position: relative;
+  width: 160px;
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.video-thumb-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.duration-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.video-info-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.video-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: #0f0f0f;
+  line-height: 1.4;
+}
+
+.video-owner {
+  font-size: 0.85rem;
+  color: #606060;
+  margin: 0;
+}
+
+.remove-video-btn {
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: #606060;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.playlist-video-row:hover .remove-video-btn {
+  opacity: 1;
+}
+
+.remove-video-btn:hover {
+  background: #e5e5e5;
+  color: #cc0000;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .playlist-page-container {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 24px;
+  }
+
+  .playlist-sidebar {
+    position: static;
+    background: #f9f9f9;
+  }
+}
+
+@media (max-width: 600px) {
+  .playlist-cover-wrapper {
+    width: 60%;
+    margin: 0 auto;
+  }
+
+  .playlist-sidebar {
+    text-align: center;
+    align-items: center;
+  }
+
+  .playlist-meta {
+    justify-content: center;
+  }
+
+  .playlist-video-row {
+    padding: 8px 0;
+    gap: 12px;
+  }
+
+  .video-index {
+    display: none;
+  }
+
+  .video-thumb-wrapper {
+    width: 120px;
+  }
+
+  .remove-video-btn {
+    opacity: 1;
+    /* Always show on mobile because no hover */
+  }
+}

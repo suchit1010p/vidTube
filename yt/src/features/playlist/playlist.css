@@ -1,0 +1,41 @@
+.playlist-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.playlist-modal {
+  background: white;
+  padding: 20px;
+  width: 320px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.playlist-item {
+  display: flex;
+  align-items: center;
+}
+
+.playlist-create {
+  display: flex;
+  gap: 8px;
+}
+
+.playlist-create input {
+  flex: 1;
+  padding: 6px;
+}
+
+.close-btn {
+  background: #ddd;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+}

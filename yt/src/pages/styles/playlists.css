@@ -1,0 +1,141 @@
+.playlists-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.playlists-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.create-playlist-btn {
+  background: #0f0f0f;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.create-playlist-btn:hover {
+  background: #272727;
+}
+
+.playlists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+.playlist-card {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.playlist-card:hover .playlist-thumb-wrapper {
+  transform: translateY(-2px);
+}
+
+.playlist-thumb-wrapper {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  transition: transform 0.2s;
+}
+
+/* Stack effect layers */
+.playlist-shadow {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  z-index: 0;
+}
+
+.shadow-1 {
+  top: -6px;
+  transform: scale(0.95);
+}
+
+.shadow-2 {
+  top: -12px;
+  transform: scale(0.9);
+  opacity: 0.6;
+}
+
+.playlist-thumb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e5e5e5;
+  z-index: 1;
+}
+
+.playlist-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.empty-thumb {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #606060;
+  font-size: 0.9rem;
+  background: #f1f1f1;
+}
+
+.playlist-count {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.playlist-info h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f0f0f;
+  line-height: 1.4;
+}
+
+.playlist-info p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #606060;
+}
+
+/* NO PLAYLISTS STATE */
+.no-playlists {
+  text-align: center;
+  padding: 40px;
+}
+
+.no-playlists button {
+  margin-top: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+}

@@ -1,0 +1,85 @@
+############################
+# Logs
+############################
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+############################
+# Runtime data
+############################
+pids
+*.pid
+*.pid.lock
+
+############################
+# Coverage / test
+############################
+coverage
+*.lcov
+.nyc_output
+
+############################
+# Node Dependencies
+############################
+backend/node_modules/
+yt/node_modules/
+jspm_packages/
+bower_components/
+
+############################
+# Build Outputs
+############################
+yt/dist/
+backend/dist/
+build/
+out/
+
+############################
+# Cache
+############################
+.cache/
+.parcel-cache/
+.webpack-cache/
+.rpt2_cache/
+.rts2_cache_*
+
+############################
+# Environment Variables
+############################
+.env
+.env.*
+backend/.env
+yt/.env
+
+############################
+# Frameworks & tools
+############################
+.next
+.nuxt
+.serverless/
+.dynamodb/
+
+############################
+# TypeScript
+############################
+*.tsbuildinfo
+
+############################
+# Misc
+############################
+.node_repl_history
+*.tgz
+.yarn-integrity
+.tern-port
+
+############################
+# Editor / OS
+############################
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
