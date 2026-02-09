@@ -38,13 +38,7 @@
   /* Start above the shadow */
   box-shadow: inset -5px -5px 10px rgba(0, 0, 0, 0.1);
   animation: bounce-decay 2.5s ease-in-out forwards;
-  /* 
-     forwards: keeps it at the last frame (resting) 
-     If we want it to repeat, we could use infinite, 
-     but "coming to rest" implies a single sequence.
-     However, a loader that stops moving might look broken?
-     Let's add a subtle pulse at the end to show it's still alive.
-  */
+
   animation: bounce-decay 3s both ease-in-out infinite;
   /* "infinite" restart the bounce which defeats "coming to rest".
      Let's compromise: Bounce 3 times then stop? No, CSS is hard to "stop then restart" cleanly without JS.

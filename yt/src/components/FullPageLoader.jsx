@@ -8,7 +8,7 @@ const FullPageLoader = () => {
                 <div className="fpl-ball"></div>
                 <div className="fpl-shadow"></div>
             </div>
-            <div className="fpl-text">Loading...</div>
+            <div className="fpl-text">Hey Cuty</div>
         </div>
     );
 };
