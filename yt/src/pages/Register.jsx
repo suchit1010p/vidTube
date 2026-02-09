@@ -22,7 +22,7 @@ const Register = () => {
   useEffect(() => {
     const hasToken = authStorage.getAccessToken();
     const user = authStorage.getUser();
-    
+
     if (hasToken && user) {
       navigate("/", { replace: true });
     }
@@ -35,13 +35,19 @@ const Register = () => {
     });
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (isSubmitting || registerMutation.isPending) return;
 
     if (!avatar) {
       alert("Avatar is required");
       return;
     }
+
+    setIsSubmitting(true);
 
     const formData = new FormData();
     formData.append("fullName", form.fullName);
@@ -57,6 +63,10 @@ const Register = () => {
     registerMutation.mutate(formData, {
       onSuccess: () => {
         navigate("/", { replace: true });
+        // Keep isSubmitting true during navigation
+      },
+      onError: () => {
+        setIsSubmitting(false);
       },
     });
   };
@@ -150,9 +160,9 @@ const Register = () => {
         <button
           type="submit"
           className="auth-btn"
-          disabled={registerMutation.isPending}
+          disabled={registerMutation.isPending || isSubmitting}
         >
-          {registerMutation.isPending ? "Creating account..." : "Sign Up"}
+          {registerMutation.isPending || isSubmitting ? "Creating account..." : "Sign Up"}
         </button>
 
         <p className="auth-footer">

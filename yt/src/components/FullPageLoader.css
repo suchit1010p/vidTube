@@ -1,0 +1,199 @@
+/* FullPageLoader.css */
+
+.fpl-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  /* White screen */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  font-family: 'Inter', sans-serif;
+}
+
+.fpl-scene {
+  position: relative;
+  width: 200px;
+  height: 300px;
+  /* Space for the bounce */
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  /* Align to the "floor" */
+  padding-bottom: 20px;
+}
+
+.fpl-ball {
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle at 30% 30%, #4facfe 0%, #00f2fe 100%);
+  border-radius: 50%;
+  position: absolute;
+  bottom: 40px;
+  /* Start above the shadow */
+  box-shadow: inset -5px -5px 10px rgba(0, 0, 0, 0.1);
+  animation: bounce-decay 2.5s ease-in-out forwards;
+  /* 
+     forwards: keeps it at the last frame (resting) 
+     If we want it to repeat, we could use infinite, 
+     but "coming to rest" implies a single sequence.
+     However, a loader that stops moving might look broken?
+     Let's add a subtle pulse at the end to show it's still alive.
+  */
+  animation: bounce-decay 3s both ease-in-out infinite;
+  /* "infinite" restart the bounce which defeats "coming to rest".
+     Let's compromise: Bounce 3 times then stop? No, CSS is hard to "stop then restart" cleanly without JS.
+     Let's do a long animation that includes the rest period, then restarts. 
+  */
+  animation: bounce-and-rest 4s infinite;
+}
+
+.fpl-shadow {
+  width: 50px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  position: absolute;
+  bottom: 20px;
+  transform-origin: center;
+  animation: shadow-scale 4s infinite;
+  filter: blur(2px);
+}
+
+.fpl-text {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  color: #333;
+  font-weight: 500;
+  opacity: 0;
+  animation: fade-in 0.5s forwards 0.5s;
+}
+
+/* 
+  Complex Bounce Animation 
+  Simulates gravity and energy loss.
+  Y=0 is "floor" (bottom: 40px in CSS).
+  Higher values = higher up.
+*/
+@keyframes bounce-and-rest {
+  0% {
+    bottom: 250px;
+    animation-timing-function: ease-in;
+  }
+
+  15% {
+    bottom: 40px;
+    animation-timing-function: ease-out;
+    transform: scaleY(0.85) scaleX(1.15);
+    /* Squish */
+  }
+
+  30% {
+    bottom: 180px;
+    animation-timing-function: ease-in;
+    transform: scaleY(1) scaleX(1);
+  }
+
+  45% {
+    bottom: 40px;
+    animation-timing-function: ease-out;
+    transform: scaleY(0.9) scaleX(1.1);
+    /* Less squish */
+  }
+
+  60% {
+    bottom: 100px;
+    animation-timing-function: ease-in;
+    transform: scaleY(1) scaleX(1);
+  }
+
+  75% {
+    bottom: 40px;
+    animation-timing-function: ease-out;
+    transform: scaleY(0.95) scaleX(1.05);
+  }
+
+  85% {
+    bottom: 60px;
+    animation-timing-function: ease-in;
+  }
+
+  92% {
+    bottom: 40px;
+    animation-timing-function: ease-out;
+  }
+
+  96% {
+    bottom: 45px;
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    bottom: 40px;
+  }
+
+  /* Rest */
+}
+
+@keyframes shadow-scale {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.2;
+  }
+
+  15% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+
+  30% {
+    transform: scale(0.6);
+    opacity: 0.3;
+  }
+
+  45% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+
+  60% {
+    transform: scale(0.7);
+    opacity: 0.4;
+  }
+
+  75% {
+    transform: scale(1.05);
+    opacity: 0.6;
+  }
+
+  85% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+
+  92% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+
+  96% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+}
+
+@keyframes fade-in {
+  to {
+    opacity: 1;
+  }
+}

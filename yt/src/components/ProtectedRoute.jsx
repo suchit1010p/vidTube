@@ -37,6 +37,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useCurrentUser } from "../features/auth/auth.hooks";
 import { authStorage } from "../utils/authStorage";
+import FullPageLoader from "./FullPageLoader";
 
 const ProtectedRoute = () => {
   const location = useLocation();
@@ -51,18 +52,7 @@ const ProtectedRoute = () => {
   });
 
   if (isLoading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontSize: '1.2rem',
-        color: '#666'
-      }}>
-        Verifying session...
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   // If error (401) or no user data, redirect to login
