@@ -5,7 +5,7 @@ import { authStorage } from "../utils/authStorage";
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
   withCredentials: true,
-  timeout: 15000, // 15 second timeout to prevent hanging requests
+  timeout: 25000, // 25 second timeout to prevent hanging requests (increased for uploads)
 });
 
 let isRefreshing = false;
@@ -31,10 +31,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     // Add request timestamp for debugging
     config.metadata = { startTime: new Date() };
-    
+
     return config;
   },
   (error) => {
@@ -72,9 +72,9 @@ api.interceptors.response.use(
     // Handle 401 errors with token refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't refresh on login/register endpoints
-      if (originalRequest.url.includes('/login') || 
-          originalRequest.url.includes('/register') ||
-          originalRequest.url.includes('/refresh-token')) {
+      if (originalRequest.url.includes('/login') ||
+        originalRequest.url.includes('/register') ||
+        originalRequest.url.includes('/refresh-token')) {
         authStorage.clearAuth();
         return Promise.reject(error);
       }
@@ -102,7 +102,7 @@ api.interceptors.response.use(
 
         // Update storage
         authStorage.setAccessToken(accessToken);
-        
+
         // Process queued requests
         processQueue(null, accessToken);
 
@@ -113,7 +113,7 @@ api.interceptors.response.use(
         // Refresh failed - clear auth and reject all queued requests
         processQueue(refreshError, null);
         authStorage.clearAuth();
-        
+
         // Redirect to login will be handled by app/ProtectedRoute
         return Promise.reject(refreshError);
       } finally {

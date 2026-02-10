@@ -41,6 +41,7 @@ import FullPageLoader from "./FullPageLoader";
 
 const ProtectedRoute = () => {
   const location = useLocation();
+  const storedUser = authStorage.getUser();
 
   // Always attempt to fetch the user. 
   // If we have an in-memory token, it uses it.
@@ -49,6 +50,11 @@ const ProtectedRoute = () => {
     enabled: true, // Always enable to allow refresh flow on reload
     retry: false,
     staleTime: 5 * 60 * 1000,
+    // Optimistic UI: If we have a user in storage, assume they are logged in
+    // while we validate with the server in the background.
+    // initialData structure must match the queryFn response structure because it runs through select
+    // queryFn returns AxiosResponse, so we mimic that structure: { data: { data: storedUser } }
+    initialData: storedUser ? { data: { data: storedUser } } : undefined,
   });
 
   if (isLoading) {

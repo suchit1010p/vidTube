@@ -1,4 +1,4 @@
-import {v2 as cloudinary} from "cloudinary"
+import { v2 as cloudinary } from "cloudinary"
 import fs from "fs"
 import { ApiError } from "./ApiError.js";
 
@@ -27,9 +27,9 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 }
 
-const deleteOnCloudinary = async(cloudinaryUrl) => {
+const deleteOnCloudinary = async (cloudinaryUrl) => {
     try {
-        if(!cloudinaryUrl) return null
+        if (!cloudinaryUrl) return null
 
         // Extract public_id from cloudinary URL
         // URL format: https://res.cloudinary.com/cloud_name/image/upload/v123456/public_id.ext
@@ -43,11 +43,11 @@ const deleteOnCloudinary = async(cloudinaryUrl) => {
         return result;
 
         return { success: true }
-        
+
     } catch (error) {
         throw new ApiError(400, "Error deleting image from cloudinary")
     }
 }
 
 
-export {uploadOnCloudinary, deleteOnCloudinary}
+export { uploadOnCloudinary, deleteOnCloudinary }
