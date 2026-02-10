@@ -4,7 +4,7 @@ import { Video } from "../models/video.model.js"
 import { User } from "../models/user.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
-import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js"
+import { deleteFromS3 } from "../utils/s3.js"
 import { ApiResponce } from "../utils/ApiResponce.js"
 import { History } from "../models/history.model.js";
 
@@ -64,7 +64,7 @@ import { History } from "../models/history.model.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
     let {
-        pages = 1,
+        page = 1,
         limit = 10,
         query,
         sortBy = "createdAt",
@@ -72,10 +72,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
         userId
     } = req.query;
 
-    pages = Math.max(Number(pages) || 1, 1);
+    const pageNumber = Math.max(Number(page) || 1, 1);
     limit = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
-    const skip = (pages - 1) * limit;
+    const skip = (pageNumber - 1) * limit;
     const sortOrder = sortType === "asc" ? 1 : -1;
 
     const allowedSort = ["createdAt", "views", "title"];
@@ -157,9 +157,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
             {
                 videos,
                 totalVideos,
-                currentPage: pages,
+                currentPage: pageNumber,
                 limit,
-                hasNextPage: pages * limit < totalVideos,
+                hasNextPage: pageNumber * limit < totalVideos,
                 totalPages: Math.ceil(totalVideos / limit)
             },
             "Videos fetched successfully"
@@ -169,42 +169,33 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 
 const publishAVideo = asyncHandler(async (req, res) => {
+    const { title, description, videoFile, thumbnail } = req.body;
 
-    const videoLocalPath = req.files?.video?.[0]?.path;
-    const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
-
-    if (!videoLocalPath) {
-        throw new ApiError(400, "Video not found, please upload the video");
-    }
-
-    if (!thumbnailLocalPath) {
-        throw new ApiError(400, "Thumbnail not found, please upload the thumbnail");
-    }
-
-    const { title, description } = req.body;
     if (!title || !description) {
-        throw new ApiError(400, "Title and description are required to publish a video");
+        throw new ApiError(400, "Title and description are required");
     }
 
-    // Upload video and thumbnail to Cloudinary
-    const videoUpload = await uploadOnCloudinary(videoLocalPath);
-    const thumbnailUpload = await uploadOnCloudinary(thumbnailLocalPath);
-
-    if (!videoUpload?.url) {
-        throw new ApiError(500, "Something went wrong while uploading the video");
+    if (!videoFile) {
+        throw new ApiError(400, "Video URL is required");
     }
 
-    if (!thumbnailUpload?.url) {
-        throw new ApiError(500, "Something went wrong while uploading the thumbnail");
+    if (!thumbnail) {
+        throw new ApiError(400, "Thumbnail URL is required");
     }
 
-    const duration = videoUpload?.duration || 0; // Cloudinary gives duration in seconds
+    // No Cloudinary upload needed.
+    // We can assume duration is 0 for now or passed from frontend if possible.
+    // For S3 uploads without lambda triggers, getting duration on backend is hard without downloading.
+    // User can update duration later or we can try to get it from frontend metadata if sent.
+
+    // For now, defaulting to 0 or we could add a duration field to the request body if the frontend can extract it.
+    const duration = req.body.duration || 0;
 
     const newVideo = await Video.create({
         title,
         description,
-        videoFile: videoUpload.url,
-        thumbnail: thumbnailUpload.url,
+        videoFile, // URL from S3
+        thumbnail, // URL from S3
         duration,
         owner: req.user._id
     });
@@ -288,7 +279,7 @@ const getVideoById = asyncHandler(async (req, res) => {
             }
         ]
     );
-    
+
     if (!video || video.length === 0) {
         throw new ApiError(404, "Video not found");
     }
@@ -363,9 +354,9 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
     await Video.findByIdAndDelete(videoId);
 
-    // Delete video and thumbnail from Cloudinary
-    const videoDeletionResult = await deleteOnCloudinary(videoURL);
-    const thumbnailDeletionResult = await deleteOnCloudinary(thumbnailURL);
+    // Delete video and thumbnail from S3
+    const videoDeletionResult = await deleteFromS3(videoURL);
+    const thumbnailDeletionResult = await deleteFromS3(thumbnailURL);
 
     return res.status(200).json(new ApiResponse(200, { videoDeletionResult, thumbnailDeletionResult }, "Video deleted successfully"));
 

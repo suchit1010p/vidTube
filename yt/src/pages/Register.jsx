@@ -4,6 +4,8 @@ import { useRegister } from "../features/auth/auth.hooks";
 import { authStorage } from "../utils/authStorage";
 import "./styles/auth.css";
 
+import { uploadFileToS3 } from "../utils/s3.upload";
+
 const Register = () => {
   const navigate = useNavigate();
   const registerMutation = useRegister();
@@ -37,7 +39,7 @@ const Register = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (isSubmitting || registerMutation.isPending) return;
@@ -49,26 +51,43 @@ const Register = () => {
 
     setIsSubmitting(true);
 
-    const formData = new FormData();
-    formData.append("fullName", form.fullName);
-    formData.append("username", form.username);
-    formData.append("email", form.email);
-    formData.append("password", form.password);
-    formData.append("avatar", avatar);
+    try {
+      // 1. Upload images to S3
+      console.log("Uploading avatar to S3...");
+      const avatarUrl = await uploadFileToS3(avatar, "avatar");
+      if (!avatarUrl) throw new Error("Avatar upload failed");
 
-    if (coverImage) {
-      formData.append("coverImage", coverImage);
+      let coverImageUrl = "";
+      if (coverImage) {
+        console.log("Uploading cover image to S3...");
+        coverImageUrl = await uploadFileToS3(coverImage, "cover-image");
+      }
+
+      // 2. Prepare data for backend
+      // Note: We are now sending JSON, not FormData, because we are sending URLs
+      const data = {
+        fullName: form.fullName,
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        avatar: avatarUrl,
+        coverImage: coverImageUrl
+      };
+
+      registerMutation.mutate(data, {
+        onSuccess: () => {
+          navigate("/", { replace: true });
+        },
+        onError: () => {
+          setIsSubmitting(false);
+        },
+      });
+
+    } catch (error) {
+      console.error("Registration flow failed:", error);
+      alert("Failed to upload images or register. Please try again.");
+      setIsSubmitting(false);
     }
-
-    registerMutation.mutate(formData, {
-      onSuccess: () => {
-        navigate("/", { replace: true });
-        // Keep isSubmitting true during navigation
-      },
-      onError: () => {
-        setIsSubmitting(false);
-      },
-    });
   };
 
   return (
@@ -76,7 +95,6 @@ const Register = () => {
       <form
         className="auth-card"
         onSubmit={handleSubmit}
-        encType="multipart/form-data"
       >
         <h2>Create an Account</h2>
         <p className="auth-subtitle">Join the community today</p>

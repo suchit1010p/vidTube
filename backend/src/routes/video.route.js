@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { getAllVideos,
+import {
+    getAllVideos,
     publishAVideo,
     getVideoById,
     updateVideo,
@@ -14,19 +15,7 @@ const router = Router();
 
 //upload video 
 
-router.route("/publishVideo").post(
-    verifyJWT,
-    upload.fields([
-        {
-            name: "video",
-            maxCount: 1
-        },
-        {   
-            name: "thumbnail",
-            maxCount: 1
-        }
-    ]),
-    publishAVideo)
+router.route("/publishVideo").post(verifyJWT, publishAVideo)
 router.route("/:videoId").get(verifyJWT, getVideoById)
 router.route("/:videoId").patch(verifyJWT, updateVideo)
 router.route("/:videoId").delete(verifyJWT, deleteVideo)

@@ -7,6 +7,8 @@ import EditProfileModal from "../components/EditProfileModal";
 import { FaEdit } from "react-icons/fa";
 import "./styles/dashboard.css"; // Ensure this path is correct based on where this file is
 
+import { uploadFileToS3 } from "../utils/s3.upload";
+
 const Dashboard = () => {
   const { data: stats, isLoading, isError } = useChannelStats();
   const deleteMutation = useDeleteVideo();
@@ -16,18 +18,25 @@ const Dashboard = () => {
 
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
-  const handleFileChange = (e, type) => {
+  const handleFileChange = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (type === "avatar") {
-      const formData = new FormData();
-      formData.append("avatar", file);
-      updateAvatarMutation.mutate(formData);
-    } else if (type === "cover") {
-      const formData = new FormData();
-      formData.append("coverImage", file);
-      updateCoverMutation.mutate(formData);
+    try {
+      if (type === "avatar") {
+        const url = await uploadFileToS3(file, "avatar");
+        if (url) {
+          updateAvatarMutation.mutate({ avatar: url });
+        }
+      } else if (type === "cover") {
+        const url = await uploadFileToS3(file, "cover-image");
+        if (url) {
+          updateCoverMutation.mutate({ coverImage: url });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update profile image:", error);
+      alert("Failed to update image. Please try again.");
     }
   };
 

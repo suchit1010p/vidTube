@@ -1,8 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
-import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js"
-import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiResponse } from "../utils/ApiResponse.js"
+import { deleteFromS3 } from "../utils/s3.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
 import { History } from "../models/history.model.js";
@@ -27,24 +27,16 @@ const generateAccessAndRefereshTokens = async (userId) => {
 }
 
 const registerUser = asyncHandler(async (req, res) => {
-    // get user details from frontend
-    // validation - not empty
-    // check if user already exists: username, email
-    // check for images, check for avatar
-    // upload them to cloudinary, avatar
-    // create user object - create entry in db
-    // remove password and refresh token field from response
-    // check for user creation
-    // return res
-
-
-    const { fullName, email, username, password } = req.body
-    //console.log("email: ", email);
+    const { fullName, email, username, password, avatar, coverImage } = req.body
 
     if (
         [fullName, email, username, password].some((field) => field?.trim() === "" || field === undefined || field === null)
     ) {
         throw new ApiError(400, "All fields are required")
+    }
+
+    if (!avatar) {
+        throw new ApiError(400, "Avatar URL is required")
     }
 
     const existedUser = await User.findOne({
@@ -54,33 +46,14 @@ const registerUser = asyncHandler(async (req, res) => {
     if (existedUser) {
         throw new ApiError(409, "User with email or username already exists")
     }
-    //console.log(req.files);
 
-    const avatarLocalPath = req.files?.avatar[0]?.path;
-    //const coverImageLocalPath = req.files?.coverImage[0]?.path;
-
-    let coverImageLocalPath;
-    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
-        coverImageLocalPath = req.files.coverImage[0].path
-    }
-
-
-    if (!avatarLocalPath) {
-        throw new ApiError(400, "Avatar file is required")
-    }
-
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-
-    if (!avatar) {
-        throw new ApiError(400, "Avatar file is required")
-    }
-
+    // No need to upload to Cloudinary/S3 here, frontend already did it.
+    // We just save the URLs.
 
     const user = await User.create({
         fullName,
-        avatar: avatar.url,
-        coverImage: coverImage?.url || "",
+        avatar, // URL from S3
+        coverImage: coverImage || "", // URL from S3
         email,
         password,
         username: username.toLowerCase()
@@ -322,33 +295,29 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-    const avatarLocalPath = req.file?.path
+    const { avatar } = req.body
 
-    if (!avatarLocalPath) {
-        throw new ApiError(400, "Avatar file is missing")
+    if (!avatar) {
+        throw new ApiError(400, "Avatar URL is missing")
     }
 
     const currentUser = await User.findById(req.user?._id)
     const oldAvatarUrl = currentUser?.avatar
 
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
-
-    if (!avatar.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
-    }
+    // No upload needed, just update URL
 
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
-                avatar: avatar.url
+                avatar: avatar
             }
         },
         { new: true }
     ).select("-password")
 
     if (oldAvatarUrl) {
-        deleteOnCloudinary(oldAvatarUrl)
+        await deleteFromS3(oldAvatarUrl);
     }
 
     return res
@@ -357,36 +326,27 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 })
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-    const coverImageLocalPath = req.file?.path
+    const { coverImage } = req.body
 
-    if (!coverImageLocalPath) {
-        throw new ApiError(400, "Cover image file is missing")
+    if (!coverImage) {
+        throw new ApiError(400, "Cover image URL is missing")
     }
 
     const currentUser = await User.findById(req.user?._id)
     const oldCoverImageUrl = currentUser?.coverImage
-    //TODO: delete old image - assignment
-
-
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-
-    if (!coverImage.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
-
-    }
 
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
-                coverImage: coverImage.url
+                coverImage: coverImage
             }
         },
         { new: true }
     ).select("-password")
 
     if (oldCoverImageUrl) {
-        deleteOnCloudinary(oldCoverImageUrl)
+        await deleteFromS3(oldCoverImageUrl);
     }
 
     return res

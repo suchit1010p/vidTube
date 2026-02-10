@@ -4,6 +4,8 @@ import { usePublishVideo } from "../features/video/video.hooks";
 import { FaCloudUploadAlt, FaImage } from "react-icons/fa";
 import "./styles/publish-video.css";
 
+import { uploadFileToS3 } from "../utils/s3.upload";
+
 const PublishVideo = () => {
     const navigate = useNavigate();
     const publishMutation = usePublishVideo();
@@ -13,7 +15,7 @@ const PublishVideo = () => {
     const [thumbnail, setThumbnail] = useState(null);
     const [videoFile, setVideoFile] = useState(null);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!title || !description || !thumbnail || !videoFile) {
@@ -21,22 +23,42 @@ const PublishVideo = () => {
             return;
         }
 
-        const formData = new FormData();
-        formData.append("title", title);
-        formData.append("description", description);
-        formData.append("thumbnail", thumbnail);
-        formData.append("video", videoFile);
+        try {
+            // 1. Upload Thumbnail
+            console.log("Starting thumbnail upload...");
+            const thumbnailUrl = await uploadFileToS3(thumbnail, "thumbnail");
+            console.log("Thumbnail upload result:", thumbnailUrl);
+            if (!thumbnailUrl) throw new Error("Thumbnail upload failed - returned null");
 
-        publishMutation.mutate(formData, {
-            onSuccess: () => {
-                alert("Video started uploading! It will be available shortly.");
-                navigate("/dashboard");
-            },
-            onError: (error) => {
-                console.error("Upload failed", error);
-                alert("Upload failed: " + (error.response?.data?.message || "Unknown error"));
-            },
-        });
+            // 2. Upload Video
+            console.log("Starting video upload...");
+            const videoUrl = await uploadFileToS3(videoFile, "video");
+            console.log("Video upload result:", videoUrl);
+            if (!videoUrl) throw new Error("Video upload failed - returned null");
+
+            // 3. Send Data
+            const data = {
+                title,
+                description,
+                thumbnail: thumbnailUrl,
+                videoFile: videoUrl
+            };
+
+            publishMutation.mutate(data, {
+                onSuccess: () => {
+                    alert("Video uploaded and published successfully!");
+                    navigate("/dashboard");
+                },
+                onError: (error) => {
+                    console.error("Publish failed", error);
+                    alert("Publish failed: " + (error.response?.data?.message || "Unknown error"));
+                },
+            });
+
+        } catch (error) {
+            console.error("Upload process failed:", error);
+            alert("Failed to upload files. Please try again.");
+        }
     };
 
     return (
