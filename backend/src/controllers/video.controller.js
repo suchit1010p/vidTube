@@ -12,7 +12,7 @@ import { History } from "../models/history.model.js";
 //     let { pages = 1, limit = 10, query, sortBy = "createdAt", sortType = "desc", userId } = req.query;
 
 //     // Convert to number safely
-//     pages = Math.max(Number(pages) || 1, 1);
+//     pages = Math.max(Number(page ?? pages) || 1, 1);
 //     limit = Math.min(Math.max(Number(limit) || 10, 1), 50); 
 //     // limit max is 50 => protects server load
 
@@ -64,6 +64,7 @@ import { History } from "../models/history.model.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
     let {
+        page,
         pages = 1,
         limit = 10,
         query,
@@ -72,7 +73,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         userId
     } = req.query;
 
-    pages = Math.max(Number(pages) || 1, 1);
+    pages = Math.max(Number(page ?? pages) || 1, 1);
     limit = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
     const skip = (pages - 1) * limit;
@@ -378,3 +379,4 @@ export {
     updateVideo,
     deleteVideo
 }
+

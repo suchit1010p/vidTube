@@ -15,7 +15,20 @@ export const useAllVideos = (params = {}) => {
     queryKey: ["videos", params],
     queryFn: () => getAllVideos(params),
     keepPreviousData: true, // important for pagination
-    select: (res) => res.data.data,
+    select: (res) => {
+      const payload = res.data?.data ?? {};
+      const currentPage = payload.currentPage ?? payload.page ?? 1;
+      const totalPages = payload.totalPages ?? 1;
+
+      return {
+        videos: payload.videos ?? [],
+        totalVideos: payload.totalVideos ?? 0,
+        totalPages,
+        currentPage,
+        limit: payload.limit ?? params.limit ?? 10,
+        hasNextPage: payload.hasNextPage ?? currentPage < totalPages,
+      };
+    },
   });
 };
 

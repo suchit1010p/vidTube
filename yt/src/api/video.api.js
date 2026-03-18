@@ -1,8 +1,18 @@
 import api from "./axios";
 
 // get all videos
-export const getAllVideos = (params) =>
-  api.get("/videos", { params });
+export const getAllVideos = (params = {}) => {
+  const { page, pages, ...restParams } = params;
+  const resolvedPage = Number(pages ?? page ?? 1) || 1;
+
+  return api.get("/videos", {
+    params: {
+      ...restParams,
+      page: resolvedPage,
+      pages: resolvedPage,
+    },
+  });
+};
 
 // get video by id
 export const getVideoById = (videoId) =>
