@@ -1,7 +1,7 @@
 // Load environment variables once for the whole app
-import "./config.js";
-import connectDB from "./db/index.js";
-import { app } from "./app.js"
+import "./src/config.js";
+import connectDB from "./src/db/index.js";
+import { app } from "./src/app.js"
 
 connectDB()
     .then(() => {
