@@ -20,6 +20,7 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 // stors static files in public
 app.use(express.static("public"))
 
+
 app.use(cookieParser())
 
 
