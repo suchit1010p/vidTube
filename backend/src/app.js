@@ -41,6 +41,11 @@ import playlistRouter from "./routes/playlist.routes.js"
 
 import { errorHandler } from "./middlewares/error.middleware.js";
 
+// Health check endpoint for Cloud Run and load balancers
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
 //routes declaration
 app.use("/api/v1/users", userRouter)
 app.use("/api/v1/videos", videoRouter)
