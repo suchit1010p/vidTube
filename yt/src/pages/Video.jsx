@@ -1,39 +1,122 @@
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useVideoById } from "../features/video/video.hooks";
-import { useToggleVideoLike } from "../features/like/like.hooks";
-import { useChannelProfile } from "../features/auth/auth.hooks";
-import { useToggleSubscription } from "../features/subscription/subscription.hooks";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchVideoById } from "../store/slices/videoSlice";
+import { toggleVideoLike } from "../store/slices/likeSlice";
+import { fetchChannelProfile } from "../store/slices/channelSlice";
+import { toggleSubscription } from "../store/slices/subscriptionSlice";
 import CommentList from "../features/comment/CommentList";
-import { useState } from "react";
 import PlaylistModal from "../features/playlist/PlaylistModal";
-import { FaThumbsUp, FaShare, FaPlus, FaCheck } from "react-icons/fa";
-
+import { FaThumbsUp, FaShare, FaPlus } from "react-icons/fa";
 import "./styles/video.css";
 
 const Video = () => {
   const { videoId } = useParams();
   const navigate = useNavigate();
-  const { data: video, isLoading, isError } = useVideoById(videoId);
+  const dispatch = useDispatch();
+
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
-  const likeMutation = useToggleVideoLike(videoId);
-  const channelUsername = video?.owner?.username;
-  const channelId = video?.owner?._id;
+  const { currentVideo: video, detailLoading, error } = useSelector(
+    (state) => state.video
+  );
+  const { user } = useSelector((state) => state.auth);
+  const { channel } = useSelector((state) => state.channel);
 
-  const { data: channel } = useChannelProfile(channelUsername);
-  const subscriptionMutation = useToggleSubscription(channelId, channelUsername);
+  useEffect(() => {
+    if (videoId) {
+      dispatch(fetchVideoById(videoId));
+    }
+  }, [dispatch, videoId]);
 
-  if (isLoading) return <div className="video-loading">Loading video...</div>;
-  if (isError || !video) return <div className="video-error">Video not found</div>;
+  useEffect(() => {
+    if (video?.owner?.username) {
+      dispatch(fetchChannelProfile(video.owner.username));
+    }
+  }, [dispatch, video?.owner?.username]);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 2500);
+  };
+
+  const handleLike = () => {
+    if (!user) {
+      navigate("/login", { state: { from: `/video/${videoId}` } });
+      return;
+    }
+    dispatch(toggleVideoLike(videoId));
+  };
+
+  const handleSubscribe = () => {
+    if (!user) {
+      navigate("/login", { state: { from: `/video/${videoId}` } });
+      return;
+    }
+    const targetChannelId = video?.owner?._id || channel?._id;
+    if (targetChannelId) {
+      dispatch(toggleSubscription(targetChannelId));
+    }
+  };
+
+  const handleSaveToPlaylist = () => {
+    if (!user) {
+      navigate("/login", { state: { from: `/video/${videoId}` } });
+      return;
+    }
+    setShowPlaylist(true);
+  };
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
-    alert("Link copied to clipboard!");
+    showToast("Link copied to clipboard!");
   };
+
+  if (detailLoading) {
+    return (
+      <div className="video-loading" style={{ textAlign: "center", padding: "80px 20px" }}>
+        <h2>Loading video...</h2>
+      </div>
+    );
+  }
+
+  if (error || !video) {
+    return (
+      <div className="video-error" style={{ textAlign: "center", padding: "80px 20px" }}>
+        <h2>Video not found</h2>
+        <button
+          onClick={() => navigate("/")}
+          style={{ marginTop: "16px", padding: "8px 16px", cursor: "pointer" }}
+        >
+          Return Home
+        </button>
+      </div>
+    );
+  }
+
+  const isOwnChannel = user?._id && (user._id === video.owner?._id || user._id === channel?._id);
 
   return (
     <div className="video-page-container">
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            background: "#2ecc71",
+            color: "#fff",
+            padding: "10px 18px",
+            borderRadius: "6px",
+            zIndex: 9999,
+          }}
+        >
+          {toastMessage}
+        </div>
+      )}
+
       {/* PRIMARY COLUMN */}
       <div className="primary-column">
         {/* VIDEO PLAYER */}
@@ -43,63 +126,70 @@ const Video = () => {
             controls
             autoPlay
             className="video-player"
+            poster={video.thumbnail}
           />
         </div>
 
-        {/* DATE & TITLE */}
+        {/* TITLE */}
         <h1 className="video-title">{video.title}</h1>
 
         {/* INFO BAR: CHANNEL & ACTIONS */}
         <div className="video-info-bar">
           <div className="owner-section">
-            {channel && (
-              <>
-                <div
-                  className="owner-avatar-wrapper"
-                  onClick={() => navigate(`/channel/${channel.username}`)}
-                >
-                  <img
-                    src={channel.avatar || "https://via.placeholder.com/50"}
-                    alt={channel.username}
-                    className="owner-avatar"
-                  />
-                </div>
-                <div className="owner-text">
-                  <h3
-                    onClick={() => navigate(`/channel/${channel.username}`)}
-                    className="owner-name"
-                  >
-                    {channel.fullName}
-                  </h3>
-                  <p className="owner-subs">{channel.subscribersCount} subscribers</p>
-                </div>
-                <button
-                  className={`subscribe-btn ${channel.isSubscribed ? "subscribed" : ""}`}
-                  onClick={() => subscriptionMutation.mutate()}
-                  disabled={subscriptionMutation.isLoading}
-                >
-                  {channel.isSubscribed ? "Subscribed" : "Subscribe"}
-                </button>
-              </>
+            <div
+              className="owner-avatar-wrapper"
+              onClick={() => navigate(`/channel/${video.owner?.username}`)}
+              style={{ cursor: "pointer" }}
+            >
+              <img
+                src={video.owner?.avatar || channel?.avatar || "https://via.placeholder.com/50"}
+                alt={video.owner?.username || "channel"}
+                className="owner-avatar"
+              />
+            </div>
+            <div className="owner-text">
+              <h3
+                onClick={() => navigate(`/channel/${video.owner?.username}`)}
+                className="owner-name"
+                style={{ cursor: "pointer" }}
+              >
+                {video.owner?.fullName || channel?.fullName || "Creator"}
+              </h3>
+              <p className="owner-subs">
+                {channel?.subscribersCount ?? 0} subscribers
+              </p>
+            </div>
+
+            {!isOwnChannel && (
+              <button
+                className={`subscribe-btn ${channel?.isSubscribed ? "subscribed" : ""}`}
+                onClick={handleSubscribe}
+              >
+                {channel?.isSubscribed ? "Subscribed" : "Subscribe"}
+              </button>
             )}
           </div>
 
           <div className="actions-section">
             <button
               className="action-pill-btn"
-              onClick={() => likeMutation.mutate()}
-              disabled={likeMutation.isLoading}
+              onClick={handleLike}
+              title={video.isLiked ? "Unlike" : "Like"}
             >
               <FaThumbsUp className={video.isLiked ? "icon-liked" : ""} />
-              <span>{video.totalLikes}</span>
+              <span>{video.totalLikes ?? 0}</span>
             </button>
 
-            <button className="action-pill-btn" onClick={handleShare}>
+            <button className="action-pill-btn" onClick={handleShare} title="Share video">
               <FaShare />
               <span>Share</span>
             </button>
 
-            <button className="action-pill-btn" onClick={() => setShowPlaylist(true)}>
+            <button
+              className="action-pill-btn"
+              onClick={handleSaveToPlaylist}
+              title="Save to playlist"
+            >
               <FaPlus />
               <span>Save</span>
             </button>
@@ -109,7 +199,7 @@ const Video = () => {
         {/* DESCRIPTION BOX */}
         <div className="description-box">
           <div className="description-stats">
-            <span>{video.totalViews?.toLocaleString()} views</span>
+            <span>{(video.totalViews ?? video.views ?? 0).toLocaleString()} views</span>
             <span> • {new Date(video.createdAt).toLocaleDateString()}</span>
           </div>
           <p className={`description-text ${isDescriptionExpanded ? "expanded" : ""}`}>
@@ -131,13 +221,10 @@ const Video = () => {
         </div>
       </div>
 
-      {/* SECONDARY COLUMN (RECOMMENDATIONS) */}
-      <div className="secondary-column">
-        {/* Placeholder for related videos */}
-        {/* <div className="related-videos-placeholder">Related Videos Coming Soon...</div> */}
-      </div>
+      {/* SECONDARY COLUMN */}
+      <div className="secondary-column" />
 
-      {/* MODALS */}
+      {/* PLAYLIST MODAL */}
       {showPlaylist && (
         <PlaylistModal
           videoId={video._id}

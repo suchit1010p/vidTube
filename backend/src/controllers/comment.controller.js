@@ -31,19 +31,8 @@ const addComment = asyncHandler(async (req, res) => {
         video: videoId
     });
     await newComment.save();
-    res.status(201).json(new ApiResponse(true, "Comment added successfully", newComment));
+    res.status(201).json(new ApiResponse(201, newComment, "Comment added successfully"));
 });
-
-// const getCommentsByVideo = asyncHandler(async (req, res) => {
-//     const { videoId } = req.params;
-
-//     if (!isValidObjectId(videoId)) {
-//         throw new ApiError(400, "Invalid video ID");
-//     }
-
-//     const comments = await Comment.find({ video: videoId }).populate("owner", "username fullName").sort({ createdAt: -1 });
-//     res.status(200).json(new ApiResponse(true, "Comments fetched successfully", comments));
-// });
 
 const getCommentsByVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
@@ -52,7 +41,7 @@ const getCommentsByVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video ID");
     }
 
-    // const comments = await Comment.find({ video: videoId }).populate("owner", "username fullName").sort({ createdAt: -1 });
+    const currentUserId = req.user?._id ? new mongoose.Types.ObjectId(req.user._id) : null;
 
     const comments = await Comment.aggregate([
         { $match: { video: new mongoose.Types.ObjectId(videoId) } },
@@ -69,7 +58,7 @@ const getCommentsByVideo = asyncHandler(async (req, res) => {
                 likesCount: { $size: "$likes" },
                 isLiked: {
                     $cond: {
-                        if: { $in: [req.user?._id, "$likes.likedBy"] },
+                        if: currentUserId ? { $in: [currentUserId, "$likes.likedBy"] } : false,
                         then: true,
                         else: false
                     }
@@ -102,12 +91,10 @@ const getCommentsByVideo = asyncHandler(async (req, res) => {
         }
     ]);
 
-
-    res.status(200).json(new ApiResponse(true, comments, "Comments fetched successfully"));
+    res.status(200).json(new ApiResponse(200, comments, "Comments fetched successfully"));
 });
 
 const updateComment = asyncHandler(async (req, res) => {
-    // TODO: update a comment
     const { commentId } = req.params;
     const { content } = req.body;
     const userId = req.user._id;
@@ -128,11 +115,9 @@ const updateComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Comment content cannot be empty");
     }
 
-
     comment.content = content || comment.content;
-
     await comment.save();
-    res.status(200).json(new ApiResponse(true, "Comment updated successfully", comment));
+    res.status(200).json(new ApiResponse(200, comment, "Comment updated successfully"));
 });
 
 const deleteComment = asyncHandler(async (req, res) => {
@@ -153,8 +138,7 @@ const deleteComment = asyncHandler(async (req, res) => {
     }
 
     await comment.deleteOne();
-    res.status(200).json(new ApiResponse(true, "Comment deleted successfully", null));
-})
-
+    res.status(200).json(new ApiResponse(200, null, "Comment deleted successfully"));
+});
 
 export { addComment, getCommentsByVideo, updateComment, deleteComment };

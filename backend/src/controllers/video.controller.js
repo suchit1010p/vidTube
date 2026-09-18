@@ -1,11 +1,10 @@
-import mongoose, { isValidObjectId } from "mongoose"
-import { asyncHandler } from "../utils/asyncHandler.js"
-import { Video } from "../models/video.model.js"
-import { User } from "../models/user.model.js"
-import { ApiError } from "../utils/ApiError.js"
-import { ApiResponse } from "../utils/ApiResponse.js"
-import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js"
-import { ApiResponce } from "../utils/ApiResponce.js"
+import mongoose, { isValidObjectId } from "mongoose";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { Video } from "../models/video.model.js";
+import { User } from "../models/user.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 import { History } from "../models/history.model.js";
 
 // const getAllVideos = asyncHandler(async (req, res) => {
@@ -212,99 +211,94 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     return res
         .status(201)
-        .json(new ApiResponce(201, newVideo, "Video published successfully"));
+        .json(new ApiResponse(201, newVideo, "Video published successfully"));
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: get video by id
+    const { videoId } = req.params;
+
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid video ID");
     }
 
-    const video = await Video.aggregate(
-        [
-            {
-                $match: {
-                    _id: new mongoose.Types.ObjectId(videoId)
-                }
-            },
-            {
-                $lookup: {
-                    from: "likes",
-                    localField: "_id",
-                    foreignField: "video",
-                    as: "likes"
-                }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "owner",
-                    foreignField: "_id",
-                    as: "owner"
-                }
-            },
-            {
-                $unwind: "$owner"
-            },
-            {
-                $lookup: {
-                    from: "histories",
-                    localField: "_id",
-                    foreignField: "video",
-                    as: "history"
-                }
-            },
-            {
-                $addFields: {
-                    totalLikes: {
-                        $size: "$likes"
-                    },
-                    isLiked: {
-                        $cond: {
-                            if: { $in: [req.user?._id, "$likes.likedBy"] },
-                            then: true,
-                            else: false
-                        }
-                    },
-                    totalViews: {
-                        $size: "$history"
+    const currentUserId = req.user?._id ? new mongoose.Types.ObjectId(req.user._id) : null;
+
+    const video = await Video.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes"
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner"
+            }
+        },
+        {
+            $unwind: "$owner"
+        },
+        {
+            $lookup: {
+                from: "histories",
+                localField: "_id",
+                foreignField: "video",
+                as: "history"
+            }
+        },
+        {
+            $addFields: {
+                totalLikes: {
+                    $size: "$likes"
+                },
+                isLiked: {
+                    $cond: {
+                        if: currentUserId ? { $in: [currentUserId, "$likes.likedBy"] } : false,
+                        then: true,
+                        else: false
                     }
-                }
-            },
-            {
-                $project: {
-                    __v: 0,
-                    "owner.email": 0,
-                    "owner.watchHistory": 0,
-                    "owner.fullName": 0,
-                    "owner.password": 0,
-                    "owner.createdAt": 0,
-                    "owner.updatedAt": 0,
-                    "owner.__v": 0,
-                    likes: 0,
-                    history: 0
+                },
+                totalViews: {
+                    $size: "$history"
                 }
             }
-        ]
-    );
-    
+        },
+        {
+            $project: {
+                __v: 0,
+                "owner.email": 0,
+                "owner.watchHistory": 0,
+                "owner.password": 0,
+                "owner.createdAt": 0,
+                "owner.updatedAt": 0,
+                "owner.__v": 0,
+                likes: 0,
+                history: 0
+            }
+        }
+    ]);
+
     if (!video || video.length === 0) {
         throw new ApiError(404, "Video not found");
     }
 
-    // adding user and video in history collection if user is not in history
-    if (req.user) {
-        const existingHistory = await History.aggregate([
-            {
-                $match: {
-                    video: new mongoose.Types.ObjectId(videoId),
-                    user: new mongoose.Types.ObjectId(req.user._id)
-                }
-            }
-        ]);
-        if (existingHistory.length === 0) {
+    // adding user and video in history collection if user is logged in
+    if (req.user?._id) {
+        const existingHistory = await History.findOne({
+            video: new mongoose.Types.ObjectId(videoId),
+            user: new mongoose.Types.ObjectId(req.user._id)
+        });
+        if (!existingHistory) {
             await History.create({
                 video: videoId,
                 user: req.user._id
@@ -312,12 +306,11 @@ const getVideoById = asyncHandler(async (req, res) => {
         }
     }
 
-    return res.status(200).json(new ApiResponse(200, video));
-})
+    return res.status(200).json(new ApiResponse(200, video[0], "Video fetched successfully"));
+});
 
 const updateVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: update video details like title, description, thumbnail
+    const { videoId } = req.params;
 
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid video ID");
@@ -339,12 +332,10 @@ const updateVideo = asyncHandler(async (req, res) => {
     await video.save();
 
     return res.status(200).json(new ApiResponse(200, video, "Video updated successfully"));
-
-})
+});
 
 const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: delete video
+    const { videoId } = req.params;
 
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid video ID");
@@ -365,12 +356,11 @@ const deleteVideo = asyncHandler(async (req, res) => {
     await Video.findByIdAndDelete(videoId);
 
     // Delete video and thumbnail from Cloudinary
-    const videoDeletionResult = await deleteOnCloudinary(videoURL);
-    const thumbnailDeletionResult = await deleteOnCloudinary(thumbnailURL);
+    const videoDeletionResult = await deleteOnCloudinary(videoURL, "video");
+    const thumbnailDeletionResult = await deleteOnCloudinary(thumbnailURL, "image");
 
     return res.status(200).json(new ApiResponse(200, { videoDeletionResult, thumbnailDeletionResult }, "Video deleted successfully"));
-
-})
+});
 
 export {
     publishAVideo,

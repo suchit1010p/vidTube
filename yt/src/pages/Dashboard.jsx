@@ -1,62 +1,75 @@
-import React, { useState } from "react";
-import { useChannelStats } from "../features/dashboard/dashboard.hooks";
-import { useDeleteVideo } from "../features/video/video.hooks";
-import { useUpdateAvatar, useUpdateCoverImage } from "../features/auth/auth.hooks";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchChannelStats, removeVideoFromDashboardStats } from "../store/slices/dashboardSlice";
+import { deleteVideo } from "../store/slices/videoSlice";
+import { updateAvatar, updateCoverImage } from "../store/slices/authSlice";
 import EditProfileModal from "../components/EditProfileModal";
 import { FaEdit } from "react-icons/fa";
-import "./styles/dashboard.css"; // Ensure this path is correct based on where this file is
+import "./styles/dashboard.css";
 
 const Dashboard = () => {
-  const { data: stats, isLoading, isError } = useChannelStats();
-  const deleteMutation = useDeleteVideo();
-  const updateAvatarMutation = useUpdateAvatar();
-  const updateCoverMutation = useUpdateCoverImage();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
+  const { stats, loading, error } = useSelector((state) => state.dashboard);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
-  const handleFileChange = (e, type) => {
+  useEffect(() => {
+    dispatch(fetchChannelStats());
+  }, [dispatch]);
+
+  const handleFileChange = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const formData = new FormData();
     if (type === "avatar") {
-      const formData = new FormData();
       formData.append("avatar", file);
-      updateAvatarMutation.mutate(formData);
+      await dispatch(updateAvatar(formData));
+      dispatch(fetchChannelStats());
     } else if (type === "cover") {
-      const formData = new FormData();
       formData.append("coverImage", file);
-      updateCoverMutation.mutate(formData);
+      await dispatch(updateCoverImage(formData));
+      dispatch(fetchChannelStats());
     }
   };
 
-  const handleDelete = (videoId) => {
+  const handleDelete = async (videoId) => {
     if (window.confirm("Are you sure you want to delete this video?")) {
-      deleteMutation.mutate(videoId);
+      setDeletingId(videoId);
+      await dispatch(deleteVideo(videoId));
+      dispatch(removeVideoFromDashboardStats(videoId));
+      setDeletingId(null);
     }
-  }
+  };
 
-  if (isLoading) {
+  if (loading && !stats) {
     return (
-      <div className="dashboard-page">
+      <div className="dashboard-page" style={{ textAlign: "center", padding: "80px 20px" }}>
         <h2>Loading dashboard...</h2>
       </div>
     );
   }
 
-  if (isError || !stats) {
+  if (error && !stats) {
     return (
-      <div className="dashboard-page">
-        <h2>Error loading dashboard stats</h2>
-        <p>Please try refreshing the page.</p>
+      <div className="dashboard-page" style={{ textAlign: "center", padding: "80px 20px" }}>
+        <h2>Error loading dashboard</h2>
+        <p style={{ color: "#e74c3c", margin: "10px 0 20px" }}>{error}</p>
+        <button
+          onClick={() => dispatch(fetchChannelStats())}
+          style={{ padding: "8px 16px", cursor: "pointer" }}
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
     <div className="dashboard-page">
-      {/* HEADER */}
       {/* PROFILE HEADER */}
       <div className="profile-header">
         {/* COVER IMAGE */}
@@ -114,7 +127,10 @@ const Dashboard = () => {
         {/* Edit Profile Modal */}
         <EditProfileModal
           isOpen={isEditProfileOpen}
-          onClose={() => setIsEditProfileOpen(false)}
+          onClose={() => {
+            setIsEditProfileOpen(false);
+            dispatch(fetchChannelStats());
+          }}
           user={stats}
         />
       </div>
@@ -170,18 +186,26 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {stats.videos && stats.videos.length > 0 ? (
+              {stats?.videos && stats.videos.length > 0 ? (
                 stats.videos.map((video) => (
                   <tr key={video._id}>
                     <td>
                       <div className="table-video-cell">
                         <img src={video.thumbnail} alt={video.title} />
-                        <span>{video.title.length > 30 ? video.title.slice(0, 30) + '...' : video.title}</span>
+                        <span>
+                          {video.title.length > 30
+                            ? video.title.slice(0, 30) + "..."
+                            : video.title}
+                        </span>
                       </div>
                     </td>
                     <td>
-                      <span className={`table-status ${video.isPublished ? 'status-published' : 'status-private'}`}>
-                        {video.isPublished ? 'Published' : 'Private'}
+                      <span
+                        className={`table-status ${
+                          video.isPublished ? "status-published" : "status-private"
+                        }`}
+                      >
+                        {video.isPublished ? "Published" : "Private"}
                       </span>
                     </td>
                     <td>{new Date(video.createdAt).toLocaleDateString()}</td>
@@ -193,21 +217,20 @@ const Dashboard = () => {
                       >
                         View
                       </button>
-                      {/* Add Edit/Delete functionality here if needed */}
                       <button
                         className="action-btn delete"
                         onClick={() => handleDelete(video._id)}
-                        disabled={deleteMutation.isLoading}
+                        disabled={deletingId === video._id}
                       >
-                        {deleteMutation.isLoading ? "Deleting..." : "Delete"}
+                        {deletingId === video._id ? "Deleting..." : "Delete"}
                       </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: "center" }}>
-                    No videos found. Start uploading!
+                  <td colSpan="5" style={{ textAlign: "center", padding: "30px" }}>
+                    No videos uploaded yet. Start uploading!
                   </td>
                 </tr>
               )}

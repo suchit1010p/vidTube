@@ -1,20 +1,33 @@
-import { useVideoComments } from "./comment.hooks";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchComments } from "../../store/slices/commentSlice";
 import CommentItem from "./CommentItem";
 import CommentForm from "./CommentForm";
 
 const CommentList = ({ videoId }) => {
-  const { data: comments = [], isLoading } = useVideoComments(videoId);
+  const dispatch = useDispatch();
+  const { comments, loading } = useSelector((state) => state.comment);
+
+  useEffect(() => {
+    if (videoId) {
+      dispatch(fetchComments(videoId));
+    }
+  }, [dispatch, videoId]);
 
   return (
     <div style={{ marginTop: "30px" }}>
-      <h3>{comments.length} Comments</h3>
+      <h3>{(comments || []).length} Comments</h3>
 
       <CommentForm videoId={videoId} />
 
-      {isLoading && <p>Loading comments...</p>}
+      {loading && <p style={{ padding: "12px 0" }}>Loading comments...</p>}
 
-      {!isLoading &&
-        comments.map((comment) => (
+      {!loading && (comments || []).length === 0 && (
+        <p style={{ color: "#888", padding: "16px 0" }}>No comments yet. Be the first to comment!</p>
+      )}
+
+      {!loading &&
+        (comments || []).map((comment) => (
           <CommentItem
             key={comment._id}
             comment={comment}

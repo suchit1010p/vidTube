@@ -1,12 +1,13 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiError } from "../utils/ApiError.js"
-import { User } from "../models/user.model.js"
-import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js"
+import { ApiError } from "../utils/ApiError.js";
+import { User } from "../models/user.model.js";
+import { uploadOnCloudinary, deleteOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { History } from "../models/history.model.js";
 import { clearUserCache } from "../middlewares/auth.middleware.js";
+import { getCookieOptions } from "../utils/cookieOptions.js";
 
 
 const generateAccessAndRefereshTokens = async (userId) => {
@@ -92,28 +93,24 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id)
 
-    const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none"
-    }
+    const options = getCookieOptions();
 
     if (!createdUser) {
-        throw new ApiError(500, "Something went wrong while registering the user")
+        throw new ApiError(500, "Something went wrong while registering the user");
     }
 
     return res
         .status(201)
+        .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", refreshToken, options)
         .json(
-            new ApiResponse(200, {
+            new ApiResponse(201, {
                 user: createdUser,
                 accessToken,
                 refreshToken
-            }, "User registered Successfully")
-        )
-
-})
+            }, "User registered successfully")
+        );
+});
 
 const loginUser = asyncHandler(async (req, res) => {
     // req body -> data
@@ -162,15 +159,11 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken").lean()
 
-    const options = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    };
+    const options = getCookieOptions();
 
     return res
         .status(200)
+        .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", refreshToken, options)
         .json(
             new ApiResponse(
@@ -204,22 +197,16 @@ const logoutUser = asyncHandler(async (req, res) => {
         }
     );
 
-    const options = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
-    };
+    const options = getCookieOptions();
 
     return res
         .status(200)
+        .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
         .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-
-    // Strict: Refresh token MUST be in cookie for security (HttpOnly)
-    // We disallow sending it in body to enforce secure flow
     const incomingRefreshToken = req.cookies.refreshToken;
 
     if (!incomingRefreshToken) {
@@ -244,15 +231,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefereshTokens(user._id);
 
-        const options = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        };
+        const options = getCookieOptions();
 
         return res
             .status(200)
+            .cookie("accessToken", accessToken, options)
             .cookie("refreshToken", newRefreshToken, options)
             .json(
                 new ApiResponse(
@@ -314,27 +297,29 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         },
         { new: true }
 
-    ).select("-password")
+    ).select("-password");
+
+    clearUserCache(req.user?._id);
 
     return res
         .status(200)
-        .json(new ApiResponse(200, user, "Account details updated successfully"))
+        .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-    const avatarLocalPath = req.file?.path
+    const avatarLocalPath = req.file?.path;
 
     if (!avatarLocalPath) {
-        throw new ApiError(400, "Avatar file is missing")
+        throw new ApiError(400, "Avatar file is missing");
     }
 
-    const currentUser = await User.findById(req.user?._id)
-    const oldAvatarUrl = currentUser?.avatar
+    const currentUser = await User.findById(req.user?._id);
+    const oldAvatarUrl = currentUser?.avatar;
 
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
 
-    if (!avatar.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
+    if (!avatar?.url) {
+        throw new ApiError(400, "Error while uploading avatar");
     }
 
     const user = await User.findByIdAndUpdate(
@@ -345,34 +330,33 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
             }
         },
         { new: true }
-    ).select("-password")
+    ).select("-password");
+
+    clearUserCache(req.user?._id);
 
     if (oldAvatarUrl) {
-        deleteOnCloudinary(oldAvatarUrl)
+        deleteOnCloudinary(oldAvatarUrl);
     }
 
     return res
         .status(200)
-        .json(new ApiResponse(200, user, "avatar updated successfully"))
-})
+        .json(new ApiResponse(200, user, "Avatar updated successfully"));
+});
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-    const coverImageLocalPath = req.file?.path
+    const coverImageLocalPath = req.file?.path;
 
     if (!coverImageLocalPath) {
-        throw new ApiError(400, "Cover image file is missing")
+        throw new ApiError(400, "Cover image file is missing");
     }
 
-    const currentUser = await User.findById(req.user?._id)
-    const oldCoverImageUrl = currentUser?.coverImage
-    //TODO: delete old image - assignment
+    const currentUser = await User.findById(req.user?._id);
+    const oldCoverImageUrl = currentUser?.coverImage;
 
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-
-    if (!coverImage.url) {
-        throw new ApiError(400, "Error while uploading on avatar")
-
+    if (!coverImage?.url) {
+        throw new ApiError(400, "Error while uploading cover image");
     }
 
     const user = await User.findByIdAndUpdate(
@@ -383,18 +367,20 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
             }
         },
         { new: true }
-    ).select("-password")
+    ).select("-password");
+
+    clearUserCache(req.user?._id);
 
     if (oldCoverImageUrl) {
-        deleteOnCloudinary(oldCoverImageUrl)
+        deleteOnCloudinary(oldCoverImageUrl);
     }
 
     return res
         .status(200)
         .json(
             new ApiResponse(200, user, "Cover image updated successfully")
-        )
-})
+        );
+});
 
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {

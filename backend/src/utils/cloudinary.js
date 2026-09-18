@@ -1,53 +1,52 @@
-import {v2 as cloudinary} from "cloudinary"
-import fs from "fs"
+import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
 import { ApiError } from "./ApiError.js";
 
 cloudinary.config({
-    cloud_name: process.env.CLOUDNIARY_CLOUD_NAME,
-    api_key: process.env.CLOUDNIARY_API_KEY,
-    api_secret: process.env.CLOUDNIARY_API_SECRET
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUDNIARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY || process.env.CLOUDNIARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET || process.env.CLOUDNIARY_API_SECRET
 });
-
 
 const uploadOnCloudinary = async (localFilePath) => {
     try {
-        if (!localFilePath) return null
-        //upload the file on cloudinary
+        if (!localFilePath) return null;
+        // upload the file on cloudinary
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: "auto"
-        })
-        // file has been uploaded successfull
-        //console.log("file is uploaded on cloudinary ", response.url);
-        fs.unlinkSync(localFilePath)
+        });
+        // Remove locally saved file
+        if (fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
         return response;
-
     } catch (error) {
-        fs.unlinkSync(localFilePath) // remove the locally saved temporary file as the upload operation got failed
+        if (localFilePath && fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
+        console.error("Cloudinary upload failed:", error);
         return null;
     }
-}
+};
 
-const deleteOnCloudinary = async(cloudinaryUrl) => {
+const deleteOnCloudinary = async (cloudinaryUrl, resourceType = "image") => {
     try {
-        if(!cloudinaryUrl) return null
+        if (!cloudinaryUrl) return null;
 
         // Extract public_id from cloudinary URL
-        // URL format: https://res.cloudinary.com/cloud_name/image/upload/v123456/public_id.ext
-        const urlParts = cloudinaryUrl.split("/")
-        const fileName = urlParts[urlParts.length - 1]
-        const public_id = fileName.split(".")[0]
+        // e.g. https://res.cloudinary.com/cloud_name/image/upload/v123456/sample.jpg -> sample
+        const urlParts = cloudinaryUrl.split("/");
+        const fileNameWithExt = urlParts[urlParts.length - 1];
+        const public_id = fileNameWithExt.split(".")[0];
 
-        // Delete from cloudinary
-        const result = await cloudinary.uploader.destroy(public_id);
-        if (!result) return null;
+        const result = await cloudinary.uploader.destroy(public_id, {
+            resource_type: resourceType
+        });
         return result;
-
-        return { success: true }
-        
     } catch (error) {
-        throw new ApiError(400, "Error deleting image from cloudinary")
+        console.error("Error deleting from Cloudinary:", error);
+        return null;
     }
-}
+};
 
-
-export {uploadOnCloudinary, deleteOnCloudinary}
+export { uploadOnCloudinary, deleteOnCloudinary };

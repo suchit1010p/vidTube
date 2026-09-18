@@ -1,40 +1,39 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useLogin } from "../features/auth/auth.hooks";
-import { authStorage } from "../utils/authStorage";
+import { useDispatch, useSelector } from "react-redux";
+import { login, clearError } from "../store/slices/authSlice";
 import "./styles/auth.css";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const loginMutation = useLogin();
+  const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Check if already logged in - instant, no API call
+  const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
+
   useEffect(() => {
-    const hasToken = authStorage.getAccessToken();
-    const user = authStorage.getUser();
-    
-    // If we have both token and user in storage, redirect immediately
-    if (hasToken && user) {
-      navigate("/", { replace: true });
+    dispatch(clearError());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirectTo = location.state?.from || "/";
+      navigate(redirectTo, { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate, location.state]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email.trim() || !password) return;
 
-    loginMutation.mutate(
-      { email, password },
-      {
-        onSuccess: () => {
-          const redirectTo = location.state?.from || "/";
-          navigate(redirectTo, { replace: true });
-        },
-      }
-    );
+    const resultAction = await dispatch(login({ email: email.trim(), password }));
+    if (login.fulfilled.match(resultAction)) {
+      const redirectTo = location.state?.from || "/";
+      navigate(redirectTo, { replace: true });
+    }
   };
 
   return (
@@ -44,8 +43,9 @@ const Login = () => {
         <p className="auth-subtitle">Login to your VidPlay account</p>
 
         <div className="auth-field">
-          <label>Email</label>
+          <label htmlFor="email">Email</label>
           <input
+            id="email"
             type="email"
             placeholder="name@example.com"
             value={email}
@@ -56,8 +56,9 @@ const Login = () => {
         </div>
 
         <div className="auth-field">
-          <label>Password</label>
+          <label htmlFor="password">Password</label>
           <input
+            id="password"
             type="password"
             placeholder="••••••••"
             value={password}
@@ -67,19 +68,18 @@ const Login = () => {
           />
         </div>
 
-        {loginMutation.isError && (
-          <div className="auth-error">
-            {loginMutation.error?.response?.data?.message ||
-              "Login failed. Please check your credentials."}
+        {error && (
+          <div className="auth-error" style={{ marginBottom: "16px" }}>
+            {error}
           </div>
         )}
 
         <button
           type="submit"
           className="auth-btn"
-          disabled={loginMutation.isPending}
+          disabled={loading}
         >
-          {loginMutation.isPending ? "Logging in..." : "Sign In"}
+          {loading ? "Signing in..." : "Sign In"}
         </button>
 
         <p className="auth-footer">

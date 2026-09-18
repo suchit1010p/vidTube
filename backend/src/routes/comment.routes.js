@@ -1,16 +1,15 @@
 import Router from 'express';
-import { verifyJWT } from '../middlewares/auth.middleware.js';
+import { verifyJWT, optionalVerifyJWT } from '../middlewares/auth.middleware.js';
 import { addComment, deleteComment, getCommentsByVideo, updateComment } from '../controllers/comment.controller.js';
 
 const router = Router();
 
+// Public / optional auth for fetching comments
+router.get('/:videoId', optionalVerifyJWT, getCommentsByVideo);
 
-
-router.use(verifyJWT);
-
-router.get('/:videoId', getCommentsByVideo);
-router.post('/:videoId', addComment);
-router.patch('/:commentId', updateComment);
-router.delete('/:commentId', deleteComment);
+// Protected routes for comment modifications
+router.post('/:videoId', verifyJWT, addComment);
+router.patch('/:commentId', verifyJWT, updateComment);
+router.delete('/:commentId', verifyJWT, deleteComment);
 
 export default router;

@@ -1,34 +1,52 @@
 import { useState } from "react";
-import { useUpdateComment, useDeleteComment } from "./comment.hooks";
-import { useToggleCommentLike } from "../like/like.hooks";
-import { useCurrentUser } from "../auth/auth.hooks";
-import { FaThumbsUp, FaTrash, FaEdit } from "react-icons/fa";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import {
+  updateComment,
+  deleteComment,
+  toggleCommentLike,
+} from "../../store/slices/commentSlice";
+import { FaThumbsUp } from "react-icons/fa";
 import "./comment.css";
 
 const CommentItem = ({ comment, videoId }) => {
-  const { data: currentUser } = useCurrentUser();
-  const isOwner = currentUser?._id === comment.owner?._id;
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const { user: currentUser } = useSelector((state) => state.auth);
+  const isOwner = currentUser?._id && currentUser._id === comment.owner?._id;
 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
 
-  const updateMutation = useUpdateComment(videoId);
-  const deleteMutation = useDeleteComment(videoId);
-  const likeMutation = useToggleCommentLike(videoId);
-
-  const handleUpdate = () => {
-    updateMutation.mutate(
-      { commentId: comment._id, data: { content: editContent } },
-      {
-        onSuccess: () => setIsEditing(false),
-      }
+  const handleUpdate = async () => {
+    if (!editContent.trim()) return;
+    const resultAction = await dispatch(
+      updateComment({ commentId: comment._id, content: editContent.trim() })
     );
+    if (updateComment.fulfilled.match(resultAction)) {
+      setIsEditing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this comment?")) {
+      await dispatch(deleteComment(comment._id));
+    }
+  };
+
+  const handleLike = () => {
+    if (!currentUser) {
+      navigate("/login", { state: { from: `/video/${videoId}` } });
+      return;
+    }
+    dispatch(toggleCommentLike(comment._id));
   };
 
   const timeAgo = (dateString) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
+    const seconds = Math.floor((new Date() - date) / 1000);
 
     if (seconds < 60) return "Just now";
     const minutes = Math.floor(seconds / 60);
@@ -66,7 +84,10 @@ const CommentItem = ({ comment, videoId }) => {
             <div className="comment-form-actions">
               <button
                 className="comment-cancel-btn"
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setEditContent(comment.content);
+                  setIsEditing(false);
+                }}
               >
                 Cancel
               </button>
@@ -81,14 +102,18 @@ const CommentItem = ({ comment, videoId }) => {
           </div>
         )}
 
-        {/* Actions Row (Like, Reply, Edit/Delete) */}
+        {/* Actions Row (Like, Edit, Delete) */}
         {!isEditing && (
           <div className="comment-actions">
             <button
               className="comment-like-btn"
-              onClick={() => likeMutation.mutate(comment._id)}
+              onClick={handleLike}
+              title={comment.isLiked ? "Unlike" : "Like"}
             >
-              <FaThumbsUp size={14} className={comment.isLiked ? "icon-liked" : ""} />
+              <FaThumbsUp
+                size={14}
+                className={comment.isLiked ? "icon-liked" : ""}
+              />
               <span>{comment.likesCount || 0}</span>
             </button>
 
@@ -102,7 +127,7 @@ const CommentItem = ({ comment, videoId }) => {
                 </button>
                 <button
                   className="comment-action-text-btn"
-                  onClick={() => deleteMutation.mutate(comment._id)}
+                  onClick={handleDelete}
                 >
                   Delete
                 </button>

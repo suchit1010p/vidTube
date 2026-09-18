@@ -1,63 +1,81 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
-  useUserPlaylists,
-  useCreatePlaylist,
-  useAddVideoToPlaylist,
-  useRemoveVideoFromPlaylist,
-} from "./playlist.hooks";
+  fetchUserPlaylists,
+  createPlaylist,
+  addVideoToPlaylist,
+  removeVideoFromPlaylist,
+} from "../../store/slices/playlistSlice";
 import PlaylistItem from "./PlaylistItem";
 import "./playlist.css";
 
 const PlaylistModal = ({ videoId, onClose }) => {
-  const { data: playlists = [], isLoading } = useUserPlaylists();
-  const createPlaylist = useCreatePlaylist();
-  const addVideo = useAddVideoToPlaylist();
-  const removeVideo = useRemoveVideoFromPlaylist();
-
+  const dispatch = useDispatch();
+  const { playlists, loading } = useSelector((state) => state.playlist);
   const [name, setName] = useState("");
 
-  const handleCreate = () => {
+  useEffect(() => {
+    dispatch(fetchUserPlaylists());
+  }, [dispatch]);
+
+  const handleCreate = async () => {
     if (!name.trim()) return;
-    createPlaylist.mutate(
-      { name },
-      { onSuccess: () => setName("") }
-    );
+    const resultAction = await dispatch(createPlaylist({ name: name.trim() }));
+    if (createPlaylist.fulfilled.match(resultAction)) {
+      setName("");
+    }
   };
 
   const toggleVideo = (playlist) => {
-    const isAdded = playlist.videos.some((video) => (video._id || video) === videoId);
+    const isAdded = (playlist.videos || []).some(
+      (video) => (video._id || video) === videoId
+    );
 
     if (isAdded) {
-      removeVideo.mutate({ playlistId: playlist._id, videoId });
+      dispatch(removeVideoFromPlaylist({ playlistId: playlist._id, videoId }));
     } else {
-      addVideo.mutate({ playlistId: playlist._id, videoId });
+      dispatch(addVideoToPlaylist({ playlistId: playlist._id, videoId }));
     }
   };
 
   return (
-    <div className="playlist-modal-backdrop">
-      <div className="playlist-modal">
+    <div className="playlist-modal-backdrop" onClick={onClose}>
+      <div className="playlist-modal" onClick={(e) => e.stopPropagation()}>
         <h3>Save to playlist</h3>
 
-        {isLoading && <p>Loading playlists...</p>}
+        {loading && <p>Loading playlists...</p>}
 
-        {!isLoading &&
-          playlists.map((playlist) => (
-            <PlaylistItem
-              key={playlist._id}
-              playlist={playlist}
-              videoId={videoId}
-              onToggle={() => toggleVideo(playlist)}
-            />
-          ))}
+        {!loading && (playlists || []).length === 0 && (
+          <p style={{ color: "#888", padding: "10px 0" }}>No playlists yet. Create one below.</p>
+        )}
+
+        <div className="playlist-items-container">
+          {!loading &&
+            (playlists || []).map((playlist) => (
+              <PlaylistItem
+                key={playlist._id}
+                playlist={playlist}
+                videoId={videoId}
+                onToggle={() => toggleVideo(playlist)}
+              />
+            ))}
+        </div>
 
         <div className="playlist-create">
           <input
             placeholder="New playlist name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleCreate();
+              }
+            }}
           />
-          <button onClick={handleCreate}>Create</button>
+          <button onClick={handleCreate} disabled={!name.trim()}>
+            Create
+          </button>
         </div>
 
         <button className="close-btn" onClick={onClose}>

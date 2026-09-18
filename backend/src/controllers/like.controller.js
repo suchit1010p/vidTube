@@ -20,7 +20,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
     if (existingLike) {
         await existingLike.deleteOne();
-        return res.status(200).json(new ApiResponse(200, null, "Video unliked successfully"));
+        return res.status(200).json(new ApiResponse(200, { isLiked: false }, "Video unliked successfully"));
     }
 
     const newLike = new Like({
@@ -28,11 +28,10 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         likedBy: userId
     });
     await newLike.save();
-    return res.status(200).json(new ApiResponse(200, null, "Video liked successfully"));
+    return res.status(200).json(new ApiResponse(200, { isLiked: true }, "Video liked successfully"));
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
-
     const { commentId } = req.params;
     const userId = req.user._id;
 
@@ -47,20 +46,22 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
     if (existingLike) {
         await existingLike.deleteOne();
-        return res.status(200).json(new ApiResponse(200, null, "Comment unliked successfully"));
+        return res.status(200).json(new ApiResponse(200, { isLiked: false }, "Comment unliked successfully"));
     }
 
-
-    const videoId = await Comment.findById(commentId).select("video");
+    const comment = await Comment.findById(commentId).select("video");
+    if (!comment) {
+        throw new ApiError(404, "Comment not found");
+    }
 
     const newLike = new Like({
         comment: commentId,
         likedBy: userId,
-        video: videoId.video
+        video: comment.video
     });
     await newLike.save();
-    return res.status(200).json(new ApiResponse(200, null, "Comment liked successfully"));
-})
+    return res.status(200).json(new ApiResponse(200, { isLiked: true }, "Comment liked successfully"));
+});
 
 
 const getLikedVideos = asyncHandler(async (req, res) => {

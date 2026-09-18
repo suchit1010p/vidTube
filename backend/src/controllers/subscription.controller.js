@@ -59,7 +59,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         await existingSubscription.deleteOne();
         return res
             .status(200)
-            .json(new ApiResponse(200, null, "Unsubscribed successfully"));
+            .json(new ApiResponse(200, { isSubscribed: false }, "Unsubscribed successfully"));
     }
 
     const newSubscription = await Subscription.create({
@@ -69,7 +69,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
     return res
         .status(201)
-        .json(new ApiResponse(201, newSubscription, "Subscribed successfully"));
+        .json(new ApiResponse(201, { isSubscribed: true, subscription: newSubscription }, "Subscribed successfully"));
 });
 
 export {

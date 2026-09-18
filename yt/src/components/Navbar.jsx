@@ -1,19 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useLogout, useCurrentUser } from "../features/auth/auth.hooks";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../store/slices/authSlice";
 import { FaPlayCircle, FaVideo, FaSignOutAlt, FaUserCircle } from "react-icons/fa";
 import "./navbar.css";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const logoutMutation = useLogout();
-  const { data: user } = useCurrentUser();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
 
-  const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSettled: () => {
-        navigate("/login", { replace: true, state: { loggedOut: true } });
-      },
-    });
+  const handleLogout = async () => {
+    await dispatch(logout());
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -26,34 +24,41 @@ const Navbar = () => {
       </div>
 
       <div className="navbar-right">
-        <Link to="/publish-video" className="nav-icon-btn" title="Create">
-          <FaVideo size={20} />
-        </Link>
-
         {user ? (
-          <Link to="/dashboard" className="nav-user-info" title="Dashboard">
-            {user.avatar ? (
-              <img src={user.avatar} alt="avatar" className="nav-avatar" />
-            ) : (
-              <FaUserCircle size={28} />
-            )}
-          </Link>
-        ) : (
-          <Link to="/login" className="login-link">Login</Link>
-        )}
+          <>
+            <Link to="/publish-video" className="nav-icon-btn" title="Create Video">
+              <FaVideo size={20} />
+            </Link>
 
-        <button
-          className="logout-icon-btn"
-          onClick={handleLogout}
-          disabled={logoutMutation.isLoading}
-          title="Logout"
-        >
-          <FaSignOutAlt size={20} />
-        </button>
+            <Link to="/dashboard" className="nav-user-info" title="Dashboard">
+              {user.avatar ? (
+                <img src={user.avatar} alt="avatar" className="nav-avatar" />
+              ) : (
+                <FaUserCircle size={28} />
+              )}
+            </Link>
+
+            <button
+              className="logout-icon-btn"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <FaSignOutAlt size={20} />
+            </button>
+          </>
+        ) : (
+          <div className="nav-auth-actions">
+            <Link to="/login" className="login-link">
+              Sign In
+            </Link>
+            <Link to="/register" className="register-link" style={{ marginLeft: "12px" }}>
+              Sign Up
+            </Link>
+          </div>
+        )}
       </div>
     </nav>
   );
 };
 
 export default Navbar;
-

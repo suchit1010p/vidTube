@@ -1,50 +1,72 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
-  usePlaylistById,
-  useRemoveVideoFromPlaylist,
-  useDeletePlaylist,
-} from "../features/playlist/playlist.hooks";
-import { useCurrentUser } from "../features/auth/auth.hooks";
-import { FaTrash, FaPlay, FaClock } from "react-icons/fa";
+  fetchPlaylistById,
+  removeVideoFromPlaylist,
+  deletePlaylist,
+} from "../store/slices/playlistSlice";
+import { FaTrash, FaPlay } from "react-icons/fa";
 import "./styles/playlist.css";
 
-const Playlist = () => {
+const PlaylistDetails = () => {
   const { playlistId } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const { data: playlist, isLoading, isError } = usePlaylistById(playlistId);
-  const removeVideo = useRemoveVideoFromPlaylist();
-  const deletePlaylist = useDeletePlaylist();
-  const { data: currentUser } = useCurrentUser();
+  const { currentPlaylist: playlist, loading, error } = useSelector(
+    (state) => state.playlist
+  );
+  const { user: currentUser } = useSelector((state) => state.auth);
 
-  if (isLoading) return <div className="playlist-loading">Loading playlist...</div>;
-  if (isError || !playlist) return <div className="playlist-error">Playlist not found</div>;
+  useEffect(() => {
+    if (playlistId) {
+      dispatch(fetchPlaylistById(playlistId));
+    }
+  }, [dispatch, playlistId]);
 
-  const isOwner = currentUser?._id === playlist.owner;
+  if (loading && !playlist) {
+    return (
+      <div className="playlist-loading" style={{ textAlign: "center", padding: "80px 20px" }}>
+        <h2>Loading playlist...</h2>
+      </div>
+    );
+  }
 
-  const handleRemoveVideo = (e, videoId) => {
+  if (error || !playlist) {
+    return (
+      <div className="playlist-error" style={{ textAlign: "center", padding: "80px 20px" }}>
+        <h2>Playlist not found</h2>
+        <button
+          onClick={() => navigate("/playlists")}
+          style={{ marginTop: "16px", padding: "8px 16px", cursor: "pointer" }}
+        >
+          Return to Playlists
+        </button>
+      </div>
+    );
+  }
+
+  const isOwner = currentUser?._id && (currentUser._id === playlist.owner || currentUser._id === playlist.owner?._id);
+
+  const handleRemoveVideo = async (e, videoId) => {
     e.stopPropagation();
-    removeVideo.mutate({ playlistId, videoId });
+    await dispatch(removeVideoFromPlaylist({ playlistId, videoId }));
   };
 
-  const handleDeletePlaylist = () => {
+  const handleDeletePlaylist = async () => {
     if (window.confirm("Are you sure you want to delete this playlist? This action cannot be undone.")) {
-      deletePlaylist.mutate(playlistId, {
-        onSuccess: () => {
-          navigate("/playlists");
-        }
-      });
+      const resultAction = await dispatch(deletePlaylist(playlistId));
+      if (deletePlaylist.fulfilled.match(resultAction)) {
+        navigate("/playlists");
+      }
     }
   };
 
-  // Calculate total duration (assuming duration is in seconds)
-  // If backend provides duration, great. If not, this is a placeholder or 0.
-  const totalDuration = playlist.videos.reduce((acc, video) => acc + (video.duration || 0), 0);
-  const formattedDuration = totalDuration > 3600
-    ? `${(totalDuration / 3600).toFixed(1)} hours`
-    : `${(totalDuration / 60).toFixed(0)} mins`;
-
-  const coverImage = playlist.videos.length > 0 ? playlist.videos[0].thumbnail : "https://via.placeholder.com/640x360?text=Empty+Playlist";
+  const coverImage =
+    playlist.videos && playlist.videos.length > 0 && playlist.videos[0].thumbnail
+      ? playlist.videos[0].thumbnail
+      : "https://via.placeholder.com/640x360?text=Empty+Playlist";
 
   return (
     <div className="playlist-page-container">
@@ -52,18 +74,24 @@ const Playlist = () => {
       <div className="playlist-sidebar">
         <div className="playlist-cover-wrapper">
           <img src={coverImage} alt="Cover" className="playlist-cover-img" />
-          <div className="playlist-overlay">
-            <FaPlay size={24} />
-            <span>Play All</span>
-          </div>
+          {playlist.videos && playlist.videos.length > 0 && (
+            <div
+              className="playlist-overlay"
+              onClick={() => navigate(`/video/${playlist.videos[0]._id}`)}
+              style={{ cursor: "pointer" }}
+            >
+              <FaPlay size={24} />
+              <span>Play All</span>
+            </div>
+          )}
         </div>
 
         <h2 className="playlist-title">{playlist.name}</h2>
 
         <div className="playlist-meta">
-          <span>{playlist.videos.length} videos</span>
+          <span>{playlist.videos?.length || 0} videos</span>
           <span>•</span>
-          <span>Updated today</span>
+          <span>Updated recently</span>
         </div>
 
         {playlist.description && (
@@ -74,20 +102,19 @@ const Playlist = () => {
           <button
             className="delete-playlist-btn"
             onClick={handleDeletePlaylist}
-            disabled={deletePlaylist.isLoading}
           >
             <FaTrash size={14} />
-            {deletePlaylist.isLoading ? "Deleting..." : "Delete Playlist"}
+            Delete Playlist
           </button>
         )}
       </div>
 
       {/* RIGHT SIDE - VIDEO LIST */}
       <div className="playlist-content">
-        {playlist.videos.length === 0 ? (
-          <div className="empty-playlist">
+        {(!playlist.videos || playlist.videos.length === 0) ? (
+          <div className="empty-playlist" style={{ padding: "40px", textAlign: "center" }}>
             <h3>This playlist is empty</h3>
-            <p>Go add some videos!</p>
+            <p>Add videos from any video page.</p>
           </div>
         ) : (
           <div className="playlist-video-list">
@@ -102,13 +129,19 @@ const Playlist = () => {
                 <div className="video-thumb-wrapper">
                   <img src={video.thumbnail} alt={video.title} />
                   <span className="duration-badge">
-                    {video.duration ? `${Math.floor(video.duration / 60)}:${String(Math.floor(video.duration % 60)).padStart(2, '0')}` : "0:00"}
+                    {video.duration
+                      ? `${Math.floor(video.duration / 60)}:${String(
+                          Math.floor(video.duration % 60)
+                        ).padStart(2, "0")}`
+                      : "0:00"}
                   </span>
                 </div>
 
                 <div className="video-info-col">
                   <h4 className="video-title">{video.title}</h4>
-                  <p className="video-owner">{video.owner?.fullName || "Unknown Channel"}</p>
+                  <p className="video-owner">
+                    {video.owner?.fullName || "Unknown Channel"}
+                  </p>
                 </div>
 
                 {isOwner && (
@@ -129,4 +162,4 @@ const Playlist = () => {
   );
 };
 
-export default Playlist;
+export default PlaylistDetails;

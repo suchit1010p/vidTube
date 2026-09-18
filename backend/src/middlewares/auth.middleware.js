@@ -1,36 +1,3 @@
-// import { ApiError } from "../utils/ApiError.js";
-// import { asyncHandler } from "../utils/asyncHandler.js";
-// import jwt from "jsonwebtoken"
-// import { User } from "../models/user.model.js";
-
-// export const verifyJWT = asyncHandler(async(req, _, next) => {
-//     try {
-//         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
-        
-//         // console.log(token);
-//         if (!token) {
-//             throw new ApiError(401, "Unauthorized request")
-//         }
-    
-//         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
-    
-//         const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
-    
-//         if (!user) {
-            
-//             throw new ApiError(401, "Invalid Access Token")
-//         }
-    
-//         req.user = user;
-//         next()
-//     } catch (error) {
-//         throw new ApiError(401, error?.message || "Invalid access token")
-//     }
-    
-// })
-
-
-
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
@@ -52,7 +19,7 @@ setInterval(() => {
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
     try {
-        // Extract token
+        // Extract token from cookie or Authorization header
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
         
         if (!token) {
@@ -75,7 +42,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
             return next();
         }
 
-        // Query database with minimal fields
+        // Query database
         const user = await User.findById(decodedToken._id)
             .select("-password -refreshToken")
             .lean(); // Use lean() for better performance
@@ -105,7 +72,49 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
     }
 });
 
-// Export cache clear function for use in logout
+// Optional auth middleware: sets req.user if valid token present, doesn't throw 401 if missing
+export const optionalVerifyJWT = asyncHandler(async (req, _, next) => {
+    try {
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
+        if (!token) {
+            req.user = null;
+            return next();
+        }
+
+        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        if (!decodedToken?._id) {
+            req.user = null;
+            return next();
+        }
+
+        const cacheKey = `user:${decodedToken._id}`;
+        const cached = userCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+            req.user = cached.user;
+            return next();
+        }
+
+        const user = await User.findById(decodedToken._id)
+            .select("-password -refreshToken")
+            .lean();
+            
+        if (user) {
+            userCache.set(cacheKey, { user, timestamp: Date.now() });
+            req.user = user;
+        } else {
+            req.user = null;
+        }
+        next();
+    } catch (error) {
+        // Silent pass for optional auth
+        req.user = null;
+        next();
+    }
+});
+
+// Export cache clear function for use in logout/update
 export const clearUserCache = (userId) => {
-    userCache.delete(`user:${userId}`);
+    if (userId) {
+        userCache.delete(`user:${userId}`);
+    }
 };

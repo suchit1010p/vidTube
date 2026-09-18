@@ -1,33 +1,41 @@
 import { useState } from "react";
-import { useAddComment } from "./comment.hooks";
-import { useCurrentUser } from "../auth/auth.hooks";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { addComment } from "../../store/slices/commentSlice";
 import "./comment.css";
 
 const CommentForm = ({ videoId }) => {
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const addCommentMutation = useAddComment(videoId);
-  const { data: currentUser } = useCurrentUser();
 
-  const handleSubmit = (e) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const { user: currentUser } = useSelector((state) => state.auth);
+  const { submitting } = useSelector((state) => state.comment);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!currentUser) {
+      navigate("/login", { state: { from: `/video/${videoId}` } });
+      return;
+    }
+
     if (!content.trim()) return;
 
-    addCommentMutation.mutate(
-      { content },
-      {
-        onSuccess: () => {
-          setContent("");
-          setIsFocused(false);
-        },
-      }
+    const resultAction = await dispatch(
+      addComment({ videoId, content: content.trim() })
     );
+    if (addComment.fulfilled.match(resultAction)) {
+      setContent("");
+      setIsFocused(false);
+    }
   };
 
   const handleCancel = () => {
     setContent("");
     setIsFocused(false);
-  }
+  };
 
   return (
     <div className="comment-form-container">
@@ -41,10 +49,20 @@ const CommentForm = ({ videoId }) => {
         <form onSubmit={handleSubmit}>
           <textarea
             className="comment-input"
-            placeholder="Add a comment..."
+            placeholder={
+              currentUser
+                ? "Add a public comment..."
+                : "Sign in to add a comment..."
+            }
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            onFocus={() => setIsFocused(true)}
+            onFocus={() => {
+              if (!currentUser) {
+                navigate("/login", { state: { from: `/video/${videoId}` } });
+              } else {
+                setIsFocused(true);
+              }
+            }}
             rows={isFocused ? 3 : 1}
           />
 
@@ -59,10 +77,10 @@ const CommentForm = ({ videoId }) => {
               </button>
               <button
                 type="submit"
-                disabled={addCommentMutation.isLoading || !content.trim()}
+                disabled={submitting || !content.trim()}
                 className="comment-submit-btn"
               >
-                {addCommentMutation.isLoading ? "Posting..." : "Comment"}
+                {submitting ? "Posting..." : "Comment"}
               </button>
             </div>
           )}

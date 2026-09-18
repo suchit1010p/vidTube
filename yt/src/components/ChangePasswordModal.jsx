@@ -1,18 +1,19 @@
 import React, { useState } from "react";
-import { useChangePassword } from "../features/auth/auth.hooks";
+import { useDispatch } from "react-redux";
+import { changePassword } from "../store/slices/authSlice";
 
 const ChangePasswordModal = ({ isOpen, onClose }) => {
+    const dispatch = useDispatch();
     const [oldPassword, setOldPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
-
-    const changePasswordMutation = useChangePassword();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
         setSuccessMsg("");
@@ -22,28 +23,29 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
             return;
         }
 
+        if (newPassword.length < 6) {
+            setError("New password must be at least 6 characters");
+            return;
+        }
 
-
-        changePasswordMutation.mutate(
-            { oldPassword, newPassword },
-            {
-                onSuccess: () => {
-                    setSuccessMsg("Password changed successfully!");
-                    setOldPassword("");
-                    setNewPassword("");
-                    setConfirmPassword("");
-                    setTimeout(() => {
-                        onClose();
-                        setSuccessMsg("");
-                    }, 1500);
-                },
-                onError: (err) => {
-                    // The error message from backend usually comes in err.response.data.message
-                    // or err.message
-                    setError(err?.response?.data?.message || "Failed to change password");
-                }
-            }
+        setIsSubmitting(true);
+        const resultAction = await dispatch(
+            changePassword({ oldPassword, newPassword })
         );
+        setIsSubmitting(false);
+
+        if (changePassword.fulfilled.match(resultAction)) {
+            setSuccessMsg("Password changed successfully!");
+            setOldPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setTimeout(() => {
+                onClose();
+                setSuccessMsg("");
+            }, 1500);
+        } else {
+            setError(resultAction.payload || "Failed to change password");
+        }
     };
 
     return (
@@ -57,42 +59,74 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                 </div>
                 <form onSubmit={handleSubmit} className="modal-form">
                     <div className="form-group">
-                        <label>Current Password</label>
+                        <label htmlFor="oldPassword">Current Password</label>
                         <input
+                            id="oldPassword"
                             type="password"
                             value={oldPassword}
-                            onChange={(e) => setOldPassword(e.target.value)}
+                            onChange={(e) => {
+                                setOldPassword(e.target.value);
+                                setError("");
+                            }}
                             required
                         />
                     </div>
                     <div className="form-group">
-                        <label>New Password</label>
+                        <label htmlFor="newPassword">New Password</label>
                         <input
+                            id="newPassword"
                             type="password"
                             value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
+                            onChange={(e) => {
+                                setNewPassword(e.target.value);
+                                setError("");
+                            }}
                             required
                         />
                     </div>
                     <div className="form-group">
-                        <label>Confirm New Password</label>
+                        <label htmlFor="confirmPassword">Confirm New Password</label>
                         <input
+                            id="confirmPassword"
                             type="password"
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onChange={(e) => {
+                                setConfirmPassword(e.target.value);
+                                setError("");
+                            }}
                             required
                         />
                     </div>
 
-                    {error && <div className="error-message">{error}</div>}
-                    {successMsg && <div className="success-message" style={{ color: 'green', fontSize: '0.9rem', marginTop: '0.5rem' }}>{successMsg}</div>}
+                    {error && (
+                        <div className="error-message" style={{ color: "#e74c3c", margin: "8px 0" }}>
+                            {error}
+                        </div>
+                    )}
+                    {successMsg && (
+                        <div
+                            className="success-message"
+                            style={{ color: "#2ecc71", fontSize: "0.9rem", marginTop: "0.5rem" }}
+                        >
+                            {successMsg}
+                        </div>
+                    )}
 
                     <div className="modal-actions">
-                        <button type="button" className="cancel-btn" onClick={onClose} disabled={changePasswordMutation.isLoading}>
+                        <button
+                            type="button"
+                            className="cancel-btn"
+                            onClick={onClose}
+                            disabled={isSubmitting}
+                        >
                             Cancel
                         </button>
-                        <button type="submit" className="save-btn" disabled={changePasswordMutation.isLoading}>
-                            {changePasswordMutation.isLoading ? "Changing..." : "Change Password"}
+                        <button
+                            type="submit"
+                            className="save-btn"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? "Changing..." : "Change Password"}
                         </button>
                     </div>
                 </form>

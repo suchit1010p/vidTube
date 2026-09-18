@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useRegister } from "../features/auth/auth.hooks";
-import { authStorage } from "../utils/authStorage";
+import { useDispatch, useSelector } from "react-redux";
+import { register, clearError } from "../store/slices/authSlice";
 import "./styles/auth.css";
 
 const Register = () => {
   const navigate = useNavigate();
-  const registerMutation = useRegister();
+  const dispatch = useDispatch();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -14,45 +14,43 @@ const Register = () => {
     email: "",
     password: "",
   });
-
   const [avatar, setAvatar] = useState(null);
   const [coverImage, setCoverImage] = useState(null);
+  const [localError, setLocalError] = useState("");
 
-  // Check if already logged in - instant, no API call
+  const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
+
   useEffect(() => {
-    const hasToken = authStorage.getAccessToken();
-    const user = authStorage.getUser();
+    dispatch(clearError());
+  }, [dispatch]);
 
-    if (hasToken && user) {
+  useEffect(() => {
+    if (isAuthenticated) {
       navigate("/", { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     setForm({
       ...form,
       [e.target.name]: e.target.value,
     });
+    setLocalError("");
   };
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (isSubmitting || registerMutation.isPending) return;
+    setLocalError("");
 
     if (!avatar) {
-      alert("Avatar is required");
+      setLocalError("Please select a profile avatar image.");
       return;
     }
 
-    setIsSubmitting(true);
-
     const formData = new FormData();
-    formData.append("fullName", form.fullName);
-    formData.append("username", form.username);
-    formData.append("email", form.email);
+    formData.append("fullName", form.fullName.trim());
+    formData.append("username", form.username.trim().toLowerCase());
+    formData.append("email", form.email.trim().toLowerCase());
     formData.append("password", form.password);
     formData.append("avatar", avatar);
 
@@ -60,16 +58,13 @@ const Register = () => {
       formData.append("coverImage", coverImage);
     }
 
-    registerMutation.mutate(formData, {
-      onSuccess: () => {
-        navigate("/", { replace: true });
-        // Keep isSubmitting true during navigation
-      },
-      onError: () => {
-        setIsSubmitting(false);
-      },
-    });
+    const resultAction = await dispatch(register(formData));
+    if (register.fulfilled.match(resultAction)) {
+      navigate("/", { replace: true });
+    }
   };
+
+  const displayedError = localError || error;
 
   return (
     <div className="auth-container">
@@ -79,11 +74,12 @@ const Register = () => {
         encType="multipart/form-data"
       >
         <h2>Create an Account</h2>
-        <p className="auth-subtitle">Join the community today</p>
+        <p className="auth-subtitle">Join the VidPlay community today</p>
 
         <div className="auth-field">
-          <label>Full Name</label>
+          <label htmlFor="fullName">Full Name</label>
           <input
+            id="fullName"
             type="text"
             name="fullName"
             placeholder="e.g. John Doe"
@@ -94,8 +90,9 @@ const Register = () => {
         </div>
 
         <div className="auth-field">
-          <label>Username</label>
+          <label htmlFor="username">Username</label>
           <input
+            id="username"
             type="text"
             name="username"
             placeholder="e.g. johndoe123"
@@ -106,8 +103,9 @@ const Register = () => {
         </div>
 
         <div className="auth-field">
-          <label>Email</label>
+          <label htmlFor="email">Email</label>
           <input
+            id="email"
             type="email"
             name="email"
             placeholder="name@example.com"
@@ -118,8 +116,9 @@ const Register = () => {
         </div>
 
         <div className="auth-field">
-          <label>Password</label>
+          <label htmlFor="password">Password</label>
           <input
+            id="password"
             type="password"
             name="password"
             placeholder="Create a strong password"
@@ -130,19 +129,24 @@ const Register = () => {
         </div>
 
         <div className="auth-field">
-          <label>Avatar (required)</label>
+          <label htmlFor="avatar">Avatar (required)</label>
           <input
+            id="avatar"
             type="file"
             accept="image/*"
-            onChange={(e) => setAvatar(e.target.files[0])}
+            onChange={(e) => {
+              setAvatar(e.target.files[0]);
+              setLocalError("");
+            }}
             required
             className="file-input"
           />
         </div>
 
         <div className="auth-field">
-          <label>Cover Image (optional)</label>
+          <label htmlFor="coverImage">Cover Image (optional)</label>
           <input
+            id="coverImage"
             type="file"
             accept="image/*"
             onChange={(e) => setCoverImage(e.target.files[0])}
@@ -150,19 +154,18 @@ const Register = () => {
           />
         </div>
 
-        {registerMutation.isError && (
-          <div className="auth-error">
-            {registerMutation.error?.response?.data?.message ||
-              "Registration failed. Please try again."}
+        {displayedError && (
+          <div className="auth-error" style={{ marginBottom: "16px" }}>
+            {displayedError}
           </div>
         )}
 
         <button
           type="submit"
           className="auth-btn"
-          disabled={registerMutation.isPending || isSubmitting}
+          disabled={loading}
         >
-          {registerMutation.isPending || isSubmitting ? "Creating account..." : "Sign Up"}
+          {loading ? "Creating account..." : "Sign Up"}
         </button>
 
         <p className="auth-footer">
