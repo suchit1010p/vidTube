@@ -10,10 +10,12 @@ export const formatDuration = (seconds) => {
 };
 
 export const formatViews = (views) => {
-  if (!views || views === 0) return "0 views";
-  if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M views`;
-  if (views >= 1000) return `${(views / 1000).toFixed(1)}K views`;
-  return `${views} views`;
+  const count = Number(views) || 0;
+  if (count === 0) return "0 views";
+  if (count === 1) return "1 view";
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M views`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K views`;
+  return `${count} views`;
 };
 
 export const formatTimeAgo = (dateString) => {
@@ -99,7 +101,7 @@ const VideoCard = ({ video, layout = "grid" }) => {
           </div>
 
           <div className="vc-stats">
-            <span>{formatViews(video.views)}</span>
+            <span>{formatViews(video.views ?? video.totalViews)}</span>
             <span className="vc-dot">•</span>
             <span>{formatTimeAgo(video.createdAt)}</span>
           </div>

@@ -236,7 +236,7 @@ const Video = () => {
           {/* EXPANDABLE DESCRIPTION BOX */}
           <div className="vp-description-card">
             <div className="vp-desc-header">
-              <span className="vp-desc-views">{formatViews(video.views)}</span>
+              <span className="vp-desc-views">{formatViews(video.views ?? video.totalViews)}</span>
               <span className="vp-desc-date">{formatTimeAgo(video.createdAt)}</span>
             </div>
 

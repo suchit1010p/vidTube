@@ -99,8 +99,37 @@ const getAllVideos = asyncHandler(async (req, res) => {
         matchStage.owner = new mongoose.Types.ObjectId(userId);
     }
 
+    if (!userId) {
+        matchStage.isPublished = true;
+    }
+
     const result = await Video.aggregate([
         { $match: matchStage },
+
+        {
+            $lookup: {
+                from: "histories",
+                localField: "_id",
+                foreignField: "video",
+                as: "histories"
+            }
+        },
+        {
+            $addFields: {
+                views: {
+                    $cond: {
+                        if: { $gt: [{ $size: "$histories" }, { $ifNull: ["$views", 0] }] },
+                        then: { $size: "$histories" },
+                        else: { $ifNull: ["$views", 0] }
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                histories: 0
+            }
+        },
 
         {
             $facet: {
@@ -130,6 +159,17 @@ const getAllVideos = asyncHandler(async (req, res) => {
                         $addFields: {
                             owner: { $first: "$owner" }
                         }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            title: 1,
+                            thumbnail: 1,
+                            duration: 1,
+                            views: 1,
+                            createdAt: 1,
+                            owner: 1
+                        }
                     }
                 ],
                 totalVideos: [
@@ -150,6 +190,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
     const videos = result[0].videos;
     const totalVideos = result[0].totalVideos;
+    const hasMore = pages * limit < totalVideos;
 
     return res.status(200).json(
         new ApiResponse(
@@ -159,7 +200,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 totalVideos,
                 currentPage: pages,
                 limit,
-                hasNextPage: pages * limit < totalVideos,
+                hasMore,
+                hasNextPage: hasMore,
+                nextPage: hasMore ? pages + 1 : null,
                 totalPages: Math.ceil(totalVideos / limit)
             },
             "Videos fetched successfully"
@@ -186,9 +229,11 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Title and description are required to publish a video");
     }
 
-    // Upload video and thumbnail to Cloudinary
-    const videoUpload = await uploadOnCloudinary(videoLocalPath);
-    const thumbnailUpload = await uploadOnCloudinary(thumbnailLocalPath);
+    // Upload video and thumbnail to Cloudinary concurrently
+    const [videoUpload, thumbnailUpload] = await Promise.all([
+        uploadOnCloudinary(videoLocalPath),
+        uploadOnCloudinary(thumbnailLocalPath)
+    ]);
 
     if (!videoUpload?.url) {
         throw new ApiError(500, "Something went wrong while uploading the video");
@@ -269,7 +314,18 @@ const getVideoById = asyncHandler(async (req, res) => {
                     }
                 },
                 totalViews: {
-                    $size: "$history"
+                    $cond: {
+                        if: { $gt: [{ $size: "$history" }, { $ifNull: ["$views", 0] }] },
+                        then: { $size: "$history" },
+                        else: { $ifNull: ["$views", 0] }
+                    }
+                },
+                views: {
+                    $cond: {
+                        if: { $gt: [{ $size: "$history" }, { $ifNull: ["$views", 0] }] },
+                        then: { $size: "$history" },
+                        else: { $ifNull: ["$views", 0] }
+                    }
                 }
             }
         },
@@ -292,7 +348,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video not found");
     }
 
-    // adding user and video in history collection if user is logged in
+    // Record view in history & increment video views counter
     if (req.user?._id) {
         const existingHistory = await History.findOne({
             video: new mongoose.Types.ObjectId(videoId),
@@ -303,7 +359,10 @@ const getVideoById = asyncHandler(async (req, res) => {
                 video: videoId,
                 user: req.user._id
             });
+            await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } });
         }
+    } else {
+        await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } });
     }
 
     return res.status(200).json(new ApiResponse(200, video[0], "Video fetched successfully"));

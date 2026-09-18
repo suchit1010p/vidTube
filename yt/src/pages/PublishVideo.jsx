@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { publishVideo } from "../store/slices/videoSlice";
+import { publishVideo, resetUploadState } from "../store/slices/videoSlice";
 import {
   FaCloudUploadAlt,
   FaImage,
   FaFileVideo,
   FaTimes,
   FaCheckCircle,
+  FaExclamationCircle,
+  FaSpinner,
 } from "react-icons/fa";
 import "./styles/publish-video.css";
 
@@ -22,7 +24,29 @@ const PublishVideo = () => {
   const [videoFile, setVideoFile] = useState(null);
   const [localError, setLocalError] = useState("");
 
-  const { uploadLoading, error } = useSelector((state) => state.video);
+  const {
+    uploadLoading,
+    uploadProgress,
+    uploadStatus,
+    uploadError,
+  } = useSelector((state) => state.video);
+
+  // Clean up upload state on component unmount
+  useEffect(() => {
+    return () => {
+      dispatch(resetUploadState());
+    };
+  }, [dispatch]);
+
+  // When upload succeeds, redirect to dashboard after brief celebration
+  useEffect(() => {
+    if (uploadStatus === "success") {
+      const timer = setTimeout(() => {
+        navigate("/dashboard");
+      }, 1800);
+      return () => clearTimeout(timer);
+    }
+  }, [uploadStatus, navigate]);
 
   const handleThumbnailChange = (e) => {
     const file = e.target.files?.[0];
@@ -45,16 +69,18 @@ const PublishVideo = () => {
     e.preventDefault();
     setLocalError("");
 
+    if (uploadLoading) return; // Prevent duplicate submission
+
+    if (!videoFile) {
+      setLocalError("Please select a video file to upload.");
+      return;
+    }
     if (!title.trim()) {
       setLocalError("Please enter a video title.");
       return;
     }
     if (!description.trim()) {
       setLocalError("Please provide a description for your video.");
-      return;
-    }
-    if (!videoFile) {
-      setLocalError("Please select a video file to upload.");
       return;
     }
     if (!thumbnail) {
@@ -68,13 +94,16 @@ const PublishVideo = () => {
     formData.append("thumbnail", thumbnail);
     formData.append("video", videoFile);
 
-    const resultAction = await dispatch(publishVideo(formData));
-    if (publishVideo.fulfilled.match(resultAction)) {
-      navigate("/dashboard");
-    }
+    await dispatch(publishVideo(formData));
   };
 
-  const displayedError = localError || error;
+  const handleRetry = () => {
+    dispatch(resetUploadState());
+    setLocalError("");
+  };
+
+  const displayedError = localError || uploadError;
+  const isBusy = uploadLoading || uploadStatus === "uploading" || uploadStatus === "processing";
 
   return (
     <div className="pv-container animate-fade-in">
@@ -85,10 +114,91 @@ const PublishVideo = () => {
           </div>
           <div>
             <h1 className="pv-title">Upload Video</h1>
-            <p className="pv-subtitle">Share your content with the world on VidPlay</p>
+            <p className="pv-subtitle">
+              Publish your video content to the VidPlay platform
+            </p>
           </div>
         </div>
 
+        {/* REAL-TIME PROGRESS / STAGE PANEL */}
+        {isBusy && (
+          <div className="pv-progress-panel animate-fade-in">
+            <div className="pv-progress-header">
+              <div className="pv-progress-meta">
+                <FaFileVideo className="pv-progress-icon" />
+                <div>
+                  <h4 className="pv-progress-filename">{videoFile?.name}</h4>
+                  <span className="pv-progress-filesize">
+                    {videoFile?.size
+                      ? `${(videoFile.size / (1024 * 1024)).toFixed(2)} MB`
+                      : ""}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pv-progress-percentage">
+                {uploadStatus === "processing" ? (
+                  <span className="pv-status-processing">Processing</span>
+                ) : (
+                  <span>{uploadProgress}%</span>
+                )}
+              </div>
+            </div>
+
+            {/* PROGRESS BAR TRACK */}
+            <div className="pv-bar-track">
+              <div
+                className={`pv-bar-fill ${
+                  uploadStatus === "processing" ? "pv-bar-indeterminate" : ""
+                }`}
+                style={{ width: `${Math.max(uploadProgress, 5)}%` }}
+              />
+            </div>
+
+            {/* STAGE DESCRIPTION */}
+            <div className="pv-stage-description">
+              {uploadStatus === "uploading" && (
+                <p>
+                  Uploading video to server... <strong>{uploadProgress}%</strong> uploaded
+                </p>
+              )}
+              {uploadStatus === "processing" && (
+                <p className="pv-processing-text">
+                  <FaSpinner className="pv-spinner-icon" /> Upload complete. Processing video &amp; generating streaming formats...
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SUCCESS MESSAGE */}
+        {uploadStatus === "success" && (
+          <div className="pv-success-panel animate-fade-in">
+            <FaCheckCircle className="pv-success-icon" />
+            <h3>Video uploaded successfully!</h3>
+            <p>Your video is ready. Redirecting to your Creator Studio...</p>
+          </div>
+        )}
+
+        {/* FAILURE & RETRY PANEL */}
+        {uploadStatus === "failed" && (
+          <div className="pv-failed-panel animate-fade-in">
+            <FaExclamationCircle className="pv-failed-icon" />
+            <div>
+              <h3>Upload failed</h3>
+              <p>{displayedError || "Something went wrong while uploading your video."}</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleRetry}
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* UPLOAD FORM */}
         <form onSubmit={handleSubmit} className="pv-form">
           {/* VIDEO DROPZONE */}
           <div className="pv-section">
@@ -100,6 +210,7 @@ const PublishVideo = () => {
                 onChange={handleVideoChange}
                 className="pv-file-input"
                 id="videoUpload"
+                disabled={isBusy}
               />
               <label htmlFor="videoUpload" className="pv-dropzone-inner">
                 {videoFile ? (
@@ -118,7 +229,9 @@ const PublishVideo = () => {
                     <p className="pv-dropzone-text">
                       Drag &amp; drop video file or <span>Browse</span>
                     </p>
-                    <span className="pv-dropzone-hint">MP4, WebM, or MOV up to 100MB</span>
+                    <span className="pv-dropzone-hint">
+                      MP4, WebM, or MOV up to 100MB
+                    </span>
                   </>
                 )}
               </label>
@@ -142,6 +255,7 @@ const PublishVideo = () => {
                   setLocalError("");
                 }}
                 maxLength={100}
+                disabled={isBusy}
                 required
               />
             </div>
@@ -160,6 +274,7 @@ const PublishVideo = () => {
                   setLocalError("");
                 }}
                 rows={4}
+                disabled={isBusy}
                 required
               />
             </div>
@@ -176,6 +291,7 @@ const PublishVideo = () => {
                   onChange={handleThumbnailChange}
                   className="pv-file-input"
                   id="thumbUpload"
+                  disabled={isBusy}
                 />
                 <label htmlFor="thumbUpload" className="pv-thumb-dropzone">
                   <FaImage className="pv-upload-icon" />
@@ -191,26 +307,28 @@ const PublishVideo = () => {
                     alt="Thumbnail preview"
                     className="pv-preview-img"
                   />
-                  <button
-                    type="button"
-                    className="pv-remove-thumb-btn"
-                    onClick={() => {
-                      setThumbnail(null);
-                      setThumbnailPreview(null);
-                    }}
-                    title="Remove thumbnail"
-                  >
-                    <FaTimes />
-                  </button>
+                  {!isBusy && (
+                    <button
+                      type="button"
+                      className="pv-remove-thumb-btn"
+                      onClick={() => {
+                        setThumbnail(null);
+                        setThumbnailPreview(null);
+                      }}
+                      title="Remove thumbnail"
+                    >
+                      <FaTimes />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* ERROR ALERT */}
-          {displayedError && (
+          {/* LOCAL ERROR ALERT */}
+          {localError && !uploadLoading && uploadStatus !== "failed" && (
             <div className="pv-error-alert animate-fade-in">
-              {displayedError}
+              {localError}
             </div>
           )}
 
@@ -220,7 +338,7 @@ const PublishVideo = () => {
               type="button"
               className="btn btn-ghost"
               onClick={() => navigate(-1)}
-              disabled={uploadLoading}
+              disabled={isBusy}
             >
               Cancel
             </button>
@@ -228,12 +346,16 @@ const PublishVideo = () => {
             <button
               type="submit"
               className="btn btn-primary pv-submit-btn"
-              disabled={uploadLoading}
+              disabled={isBusy || !videoFile || !title.trim()}
             >
-              {uploadLoading ? (
+              {isBusy ? (
                 <>
                   <div className="pv-spinner" />
-                  <span>Uploading &amp; Processing...</span>
+                  <span>
+                    {uploadStatus === "processing"
+                      ? "Processing Video..."
+                      : `Uploading (${uploadProgress}%)...`}
+                  </span>
                 </>
               ) : (
                 <>

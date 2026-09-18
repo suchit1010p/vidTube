@@ -18,9 +18,12 @@ export const getAllVideos = (params = {}) => {
 export const getVideoById = (videoId) =>
   api.get(`/videos/${videoId}`);
 
-// publish video
-export const publishVideo = (formData) =>
-  api.post("/videos/publishVideo", formData);
+// publish video with real upload progress tracking
+export const publishVideo = (formData, onUploadProgress) =>
+  api.post("/videos/publishVideo", formData, {
+    onUploadProgress,
+    timeout: 0, // Disable timeout for video uploads so large files & Cloudinary encoding don't abort
+  });
 
 // update video
 export const updateVideo = (videoId, data) =>

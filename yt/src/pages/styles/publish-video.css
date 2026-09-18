@@ -51,6 +51,164 @@
   color: var(--text-secondary);
 }
 
+/* REAL-TIME PROGRESS PANEL */
+.pv-progress-panel {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.pv-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pv-progress-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pv-progress-icon {
+  font-size: 1.8rem;
+  color: var(--accent-primary);
+}
+
+.pv-progress-filename {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 380px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pv-progress-filesize {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.pv-progress-percentage {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.pv-status-processing {
+  font-size: 0.85rem;
+  color: var(--warning);
+  animation: pulseGlow 1.5s infinite;
+}
+
+.pv-bar-track {
+  width: 100%;
+  height: 8px;
+  background-color: var(--bg-surface-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.pv-bar-fill {
+  height: 100%;
+  background: var(--accent-gradient);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.pv-bar-indeterminate {
+  width: 100% !important;
+  background: linear-gradient(
+    90deg,
+    var(--accent-primary) 0%,
+    #ec4899 50%,
+    var(--accent-primary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.pv-stage-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.pv-processing-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--warning);
+}
+
+.pv-spinner-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* SUCCESS & FAILURE PANELS */
+.pv-success-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  background-color: var(--success-bg);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--success);
+  gap: 8px;
+}
+
+.pv-success-icon {
+  font-size: 2.2rem;
+}
+
+.pv-success-panel h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.pv-success-panel p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.pv-failed-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background-color: var(--danger-bg);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+}
+
+.pv-failed-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.pv-failed-panel h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.pv-failed-panel p {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+/* FORM STYLES */
 .pv-form {
   display: flex;
   flex-direction: column;
@@ -254,5 +412,9 @@
   }
   .pv-thumb-layout {
     grid-template-columns: 1fr;
+  }
+  .pv-failed-panel {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

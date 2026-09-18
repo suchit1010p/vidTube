@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchVideos } from "../store/slices/videoSlice";
+import { fetchVideos, fetchMoreVideos } from "../store/slices/videoSlice";
 import VideoCard from "../components/common/VideoCard";
 import VideoCardSkeleton from "../components/common/VideoCardSkeleton";
 import EmptyState from "../components/common/EmptyState";
-import { FaVideoSlash, FaSearch, FaExclamationTriangle } from "react-icons/fa";
+import { FaVideoSlash, FaSearch, FaExclamationTriangle, FaCheck } from "react-icons/fa";
 import "./styles/home.css";
 
 const CATEGORY_CHIPS = [
@@ -21,35 +21,81 @@ const Home = () => {
 
   const searchQuery = searchParams.get("query") || "";
   const [activeChip, setActiveChip] = useState("all");
-  const [page, setPage] = useState(1);
 
-  const { videos, totalPages, currentPage, loading, error } = useSelector(
-    (state) => state.video
-  );
+  const {
+    videos,
+    loading,
+    loadingMore,
+    error,
+    loadMoreError,
+    hasNextPage,
+    nextPage,
+  } = useSelector((state) => state.video);
+
+  const sentinelRef = useRef(null);
 
   // Selected sort configuration from chips
   const currentChip = CATEGORY_CHIPS.find((c) => c.id === activeChip) || CATEGORY_CHIPS[0];
 
+  // 1. Initial batch fetch whenever search query or category chip changes
   useEffect(() => {
     dispatch(
       fetchVideos({
-        page,
         limit: 12,
         query: searchQuery || undefined,
         sortBy: currentChip.sortBy,
         sortType: currentChip.sortType,
       })
     );
-  }, [dispatch, page, searchQuery, activeChip]);
+  }, [dispatch, searchQuery, activeChip, currentChip.sortBy, currentChip.sortType]);
+
+  // 2. Load more videos callback
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !loading && !loadingMore && !loadMoreError) {
+      dispatch(
+        fetchMoreVideos({
+          limit: 12,
+          query: searchQuery || undefined,
+          sortBy: currentChip.sortBy,
+          sortType: currentChip.sortType,
+          page: nextPage,
+        })
+      );
+    }
+  }, [dispatch, hasNextPage, loading, loadingMore, loadMoreError, nextPage, searchQuery, currentChip]);
+
+  // 3. Intersection Observer for Infinite Scrolling
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const firstEntry = entries[0];
+        if (firstEntry && firstEntry.isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px", // Trigger slightly before reaching the bottom
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [handleLoadMore]);
 
   const handleChipClick = (chip) => {
     setActiveChip(chip.id);
-    setPage(1);
   };
 
   const handleClearSearch = () => {
     setSearchParams({});
-    setPage(1);
   };
 
   return (
@@ -83,7 +129,7 @@ const Home = () => {
         )}
       </div>
 
-      {/* ERROR STATE */}
+      {/* INITIAL FETCH ERROR STATE */}
       {error && !loading && (
         <div className="hm-error-wrapper animate-fade-in">
           <FaExclamationTriangle className="hm-error-icon" />
@@ -94,7 +140,6 @@ const Home = () => {
             onClick={() =>
               dispatch(
                 fetchVideos({
-                  page,
                   limit: 12,
                   query: searchQuery || undefined,
                   sortBy: currentChip.sortBy,
@@ -108,16 +153,16 @@ const Home = () => {
         </div>
       )}
 
-      {/* LOADING SKELETON GRID */}
+      {/* INITIAL LOADING SKELETON GRID */}
       {loading && (
         <div className="hm-video-grid">
-          {Array.from({ length: 8 }).map((_, idx) => (
-            <VideoCardSkeleton key={`skeleton-${idx}`} />
+          {Array.from({ length: 12 }).map((_, idx) => (
+            <VideoCardSkeleton key={`init-skeleton-${idx}`} />
           ))}
         </div>
       )}
 
-      {/* CONTENT GRID */}
+      {/* VIDEO CONTENT GRID */}
       {!loading && !error && (
         <>
           {(!videos || videos.length === 0) ? (
@@ -137,36 +182,44 @@ const Home = () => {
               }
             />
           ) : (
-            <div className="hm-video-grid">
-              {videos.map((video) => (
-                <VideoCard key={video._id} video={video} />
-              ))}
-            </div>
-          )}
+            <>
+              <div className="hm-video-grid">
+                {videos.map((video) => (
+                  <VideoCard key={video._id} video={video} />
+                ))}
 
-          {/* PAGINATION CONTROLS */}
-          {totalPages > 1 && (
-            <div className="hm-pagination">
-              <button
-                className="btn btn-secondary btn-sm"
-                disabled={currentPage <= 1}
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-              >
-                Previous
-              </button>
+                {/* SKELETON CARDS WHILE LOADING MORE (PRESERVES EXISTING VIDEOS) */}
+                {loadingMore &&
+                  Array.from({ length: 4 }).map((_, idx) => (
+                    <VideoCardSkeleton key={`more-skeleton-${idx}`} />
+                  ))}
+              </div>
 
-              <span className="hm-page-indicator">
-                Page {currentPage} of {totalPages}
-              </span>
+              {/* RETRY BAR IF LOADING MORE FAILED */}
+              {loadMoreError && (
+                <div className="hm-loadmore-error animate-fade-in">
+                  <span>Couldn&rsquo;t load more videos.</span>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleLoadMore}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
 
-              <button
-                className="btn btn-secondary btn-sm"
-                disabled={currentPage >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </button>
-            </div>
+              {/* END OF LIST NOTICE */}
+              {!hasNextPage && videos.length > 0 && !loadingMore && (
+                <div className="hm-end-notice">
+                  <div className="hm-end-divider" />
+                  <span className="hm-end-text">You&rsquo;ve reached the end</span>
+                  <div className="hm-end-divider" />
+                </div>
+              )}
+
+              {/* INTERSECTION OBSERVER SENTINEL */}
+              {hasNextPage && <div ref={sentinelRef} className="hm-sentinel" />}
+            </>
           )}
         </>
       )}
