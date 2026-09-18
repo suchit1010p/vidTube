@@ -1,28 +1,40 @@
-.layout {
-  height: 100vh;
+/* ==========================================================================
+   LAYOUT COMPONENT STYLES
+   ========================================================================== */
+
+.ly-container {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-primary);
 }
 
-.layout-body {
-  flex: 1;
+.ly-main-wrapper {
   display: flex;
-  background-color: #f9f9f9;
+  flex: 1;
+  width: 100%;
+  position: relative;
 }
 
-.layout-content {
+.ly-content-area {
   flex: 1;
-  padding: 20px;
+  min-width: 0; /* Prevents flex children from overflowing */
+  padding: 24px 32px;
   overflow-y: auto;
+  max-width: 100%;
+}
+
+/* RESPONSIVE BREAKPOINTS */
+@media (max-width: 1024px) {
+  .ly-content-area {
+    padding: 20px 24px;
+  }
 }
 
 @media (max-width: 768px) {
-  .layout-body {
-    flex-direction: column;
-  }
-
-  /* Add padding to bottom so content isn't hidden behind fixed bottom nav */
-  .layout-content {
-    padding-bottom: 80px;
+  .ly-content-area {
+    padding: 16px;
+    padding-bottom: calc(var(--mobile-nav-height) + 24px); /* Extra clearance for mobile bottom bar */
   }
 }

@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchComments } from "../../store/slices/commentSlice";
-import CommentItem from "./CommentItem";
 import CommentForm from "./CommentForm";
+import CommentItem from "./CommentItem";
+import { FaCommentAlt } from "react-icons/fa";
+import "./comment.css";
 
 const CommentList = ({ videoId }) => {
   const dispatch = useDispatch();
@@ -15,25 +17,36 @@ const CommentList = ({ videoId }) => {
   }, [dispatch, videoId]);
 
   return (
-    <div style={{ marginTop: "30px" }}>
-      <h3>{(comments || []).length} Comments</h3>
+    <div className="cm-container">
+      {/* HEADER */}
+      <div className="cm-header">
+        <h3 className="cm-heading">
+          {comments?.length || 0} {comments?.length === 1 ? "Comment" : "Comments"}
+        </h3>
+      </div>
 
+      {/* INPUT FORM */}
       <CommentForm videoId={videoId} />
 
-      {loading && <p style={{ padding: "12px 0" }}>Loading comments...</p>}
-
-      {!loading && (comments || []).length === 0 && (
-        <p style={{ color: "#888", padding: "16px 0" }}>No comments yet. Be the first to comment!</p>
-      )}
-
-      {!loading &&
-        (comments || []).map((comment) => (
-          <CommentItem
-            key={comment._id}
-            comment={comment}
-            videoId={videoId}
-          />
-        ))}
+      {/* COMMENTS LIST */}
+      <div className="cm-list">
+        {loading && (!comments || comments.length === 0) ? (
+          <div className="cm-loading">Loading comments...</div>
+        ) : (!comments || comments.length === 0) ? (
+          <div className="cm-empty">
+            <FaCommentAlt className="cm-empty-icon" />
+            <p>No comments yet. Start the conversation!</p>
+          </div>
+        ) : (
+          comments.map((comment) => (
+            <CommentItem
+              key={comment._id}
+              comment={comment}
+              videoId={videoId}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 };

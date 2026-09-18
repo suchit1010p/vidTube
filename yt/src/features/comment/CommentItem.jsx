@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,7 +6,8 @@ import {
   deleteComment,
   toggleCommentLike,
 } from "../../store/slices/commentSlice";
-import { FaThumbsUp } from "react-icons/fa";
+import { FaThumbsUp, FaEdit, FaTrash } from "react-icons/fa";
+import { formatTimeAgo } from "../../components/common/VideoCard";
 import "./comment.css";
 
 const CommentItem = ({ comment, videoId }) => {
@@ -43,47 +44,38 @@ const CommentItem = ({ comment, videoId }) => {
     dispatch(toggleCommentLike(comment._id));
   };
 
-  const timeAgo = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const seconds = Math.floor((new Date() - date) / 1000);
-
-    if (seconds < 60) return "Just now";
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} minutes ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hours ago`;
-    const days = Math.floor(hours / 24);
-    return `${days} days ago`;
-  };
-
   return (
-    <div className="comment-item">
+    <div className="cm-item animate-fade-in">
       <img
-        src={comment.owner?.avatar || "https://via.placeholder.com/40"}
-        alt="User"
-        className="comment-avatar"
+        src={
+          comment.owner?.avatar ||
+          `https://api.dicebear.com/7.x/initials/svg?seed=${comment.owner?.username || "User"}`
+        }
+        alt={comment.owner?.username || "user"}
+        className="cm-item-avatar"
       />
 
-      <div className="comment-content-wrapper">
-        <div className="comment-header">
-          <span className="comment-author">@{comment.owner?.username}</span>
-          <span className="comment-date">{timeAgo(comment.createdAt)}</span>
+      <div className="cm-item-content">
+        <div className="cm-item-header">
+          <span className="cm-item-author">
+            @{comment.owner?.username || "anonymous"}
+          </span>
+          <span className="cm-item-time">{formatTimeAgo(comment.createdAt)}</span>
         </div>
 
         {!isEditing ? (
-          <p className="comment-text">{comment.content}</p>
+          <p className="cm-item-text">{comment.content}</p>
         ) : (
-          <div className="comment-edit-form">
+          <div className="cm-edit-box">
             <textarea
+              className="cm-textarea"
+              rows={2}
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              rows={2}
-              className="comment-edit-input"
             />
-            <div className="comment-form-actions">
+            <div className="cm-edit-actions">
               <button
-                className="comment-cancel-btn"
+                className="btn btn-ghost btn-sm"
                 onClick={() => {
                   setEditContent(comment.content);
                   setIsEditing(false);
@@ -92,7 +84,7 @@ const CommentItem = ({ comment, videoId }) => {
                 Cancel
               </button>
               <button
-                className="comment-submit-btn"
+                className="btn btn-primary btn-sm"
                 onClick={handleUpdate}
                 disabled={!editContent.trim()}
               >
@@ -102,36 +94,37 @@ const CommentItem = ({ comment, videoId }) => {
           </div>
         )}
 
-        {/* Actions Row (Like, Edit, Delete) */}
+        {/* ACTIONS (LIKE, EDIT, DELETE) */}
         {!isEditing && (
-          <div className="comment-actions">
+          <div className="cm-item-actions">
             <button
-              className="comment-like-btn"
+              className={`cm-like-btn ${comment.isLiked ? "cm-liked" : ""}`}
               onClick={handleLike}
               title={comment.isLiked ? "Unlike" : "Like"}
             >
-              <FaThumbsUp
-                size={14}
-                className={comment.isLiked ? "icon-liked" : ""}
-              />
+              <FaThumbsUp size={12} />
               <span>{comment.likesCount || 0}</span>
             </button>
 
             {isOwner && (
-              <>
+              <div className="cm-owner-actions">
                 <button
-                  className="comment-action-text-btn"
+                  className="cm-tool-btn"
                   onClick={() => setIsEditing(true)}
+                  title="Edit comment"
                 >
-                  Edit
+                  <FaEdit size={12} />
+                  <span>Edit</span>
                 </button>
                 <button
-                  className="comment-action-text-btn"
+                  className="cm-tool-btn cm-tool-delete"
                   onClick={handleDelete}
+                  title="Delete comment"
                 >
-                  Delete
+                  <FaTrash size={12} />
+                  <span>Delete</span>
                 </button>
-              </>
+              </div>
             )}
           </div>
         )}

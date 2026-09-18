@@ -1,20 +1,24 @@
+import React from "react";
+import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
-import { Outlet } from "react-router-dom";
+import MobileNav from "./MobileNav";
 import "./layout.css";
 
 const Layout = () => {
   return (
-    <div className="layout">
+    <div className="ly-container">
       <Navbar />
 
-      <div className="layout-body">
+      <div className="ly-main-wrapper">
         <Sidebar />
 
-        <main className="layout-content">
+        <main className="ly-content-area" id="main-content">
           <Outlet />
         </main>
       </div>
+
+      <MobileNav />
     </div>
   );
 };

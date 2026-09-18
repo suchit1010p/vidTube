@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateAccount } from "../store/slices/authSlice";
 import ChangePasswordModal from "./ChangePasswordModal";
+import { FaTimes, FaUser, FaEnvelope, FaKey } from "react-icons/fa";
 
 const EditProfileModal = ({ isOpen, onClose, user }) => {
   const dispatch = useDispatch();
@@ -27,7 +28,7 @@ const EditProfileModal = ({ isOpen, onClose, user }) => {
     setLocalError("");
 
     if (!fullName.trim() || !email.trim()) {
-      setLocalError("Name and email are required");
+      setLocalError("Name and email are required.");
       return;
     }
 
@@ -44,76 +45,93 @@ const EditProfileModal = ({ isOpen, onClose, user }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card animate-fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Edit Profile</h3>
-          <button className="close-btn" onClick={onClose}>
-            &times;
+          <button className="modal-close-btn" onClick={onClose} aria-label="Close">
+            <FaTimes />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="modal-form">
-          <div className="form-group">
-            <label htmlFor="editFullName">Full Name</label>
-            <input
-              id="editFullName"
-              type="text"
-              value={fullName}
-              onChange={(e) => {
-                setFullName(e.target.value);
-                setLocalError("");
-              }}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="editEmail">Email</label>
-            <input
-              id="editEmail"
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setLocalError("");
-              }}
-              required
-            />
-          </div>
 
-          {displayedError && (
-            <div className="error-message" style={{ color: "#e74c3c", margin: "8px 0" }}>
-              {displayedError}
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            <div className="form-input-group">
+              <label className="form-label" htmlFor="editFullName">
+                Full Name
+              </label>
+              <div className="auth-input-wrapper">
+                <FaUser className="auth-input-icon" />
+                <input
+                  id="editFullName"
+                  type="text"
+                  className="form-control auth-input-padding"
+                  value={fullName}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    setLocalError("");
+                  }}
+                  required
+                />
+              </div>
             </div>
-          )}
 
-          <div className="modal-actions">
+            <div className="form-input-group">
+              <label className="form-label" htmlFor="editEmail">
+                Email Address
+              </label>
+              <div className="auth-input-wrapper">
+                <FaEnvelope className="auth-input-icon" />
+                <input
+                  id="editEmail"
+                  type="email"
+                  className="form-control auth-input-padding"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setLocalError("");
+                  }}
+                  required
+                />
+              </div>
+            </div>
+
+            {displayedError && (
+              <div className="auth-error-alert animate-fade-in">
+                {displayedError}
+              </div>
+            )}
+
             <button
               type="button"
-              className="change-password-btn"
+              className="btn btn-secondary btn-sm"
+              style={{ width: "100%", marginTop: "4px" }}
               onClick={() => setIsChangePasswordOpen(true)}
             >
-              Change Password
+              <FaKey size={12} />
+              <span>Change Password</span>
             </button>
-            <div className="right-actions">
-              <button
-                type="button"
-                className="cancel-btn"
-                onClick={onClose}
-                disabled={loading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="save-btn"
-                disabled={loading}
-              >
-                {loading ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm"
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
           </div>
         </form>
 
-        {/* Change Password Modal */}
+        {/* CHANGE PASSWORD MODAL */}
         <ChangePasswordModal
           isOpen={isChangePasswordOpen}
           onClose={() => setIsChangePasswordOpen(false)}

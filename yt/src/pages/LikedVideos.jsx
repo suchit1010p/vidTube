@@ -1,63 +1,65 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchLikedVideos } from "../store/slices/likeSlice";
+import VideoCard from "../components/common/VideoCard";
+import VideoCardSkeleton from "../components/common/VideoCardSkeleton";
+import EmptyState from "../components/common/EmptyState";
+import { FaHeart, FaExclamationTriangle } from "react-icons/fa";
 import "./styles/liked-videos.css";
 
 const LikedVideos = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
-
-  const { likedVideos, loading } = useSelector((state) => state.like);
+  const { likedVideos, loading, error } = useSelector((state) => state.like);
 
   useEffect(() => {
     dispatch(fetchLikedVideos());
   }, [dispatch]);
 
-  if (loading && (!likedVideos || likedVideos.length === 0)) {
-    return (
-      <div className="liked-loading" style={{ textAlign: "center", padding: "80px 20px" }}>
-        <h2>Loading liked videos...</h2>
-      </div>
-    );
-  }
+  const validVideos = (likedVideos || [])
+    .map((item) => item.video)
+    .filter((v) => v && v._id);
 
   return (
-    <div className="liked-videos-page">
-      <h2>Liked Videos</h2>
+    <div className="lv-container animate-fade-in">
+      <div className="lv-header">
+        <div className="lv-header-icon-wrapper">
+          <FaHeart className="lv-header-icon" />
+        </div>
+        <div>
+          <h1 className="lv-title">Liked Videos</h1>
+          <p className="lv-subtitle">
+            {validVideos.length} {validVideos.length === 1 ? "video" : "videos"} you have liked
+          </p>
+        </div>
+      </div>
 
-      {(!likedVideos || likedVideos.length === 0) && (
-        <div className="no-likes" style={{ textAlign: "center", padding: "60px 20px" }}>
-          <p>You haven't liked any videos yet.</p>
+      {error && (
+        <div className="pv-error-alert" style={{ marginBottom: "16px" }}>
+          {error}
         </div>
       )}
 
-      <div className="liked-videos-grid">
-        {likedVideos?.map((like) => {
-          const video = like.video;
-          if (!video?._id) return null;
-
-          return (
-            <div
-              key={like._id || video._id}
-              className="liked-video-card"
-              onClick={() => navigate(`/video/${video._id}`)}
-              title={video.title}
-            >
-              <div className="liked-thumb-wrapper">
-                <img
-                  src={video.thumbnail || "https://via.placeholder.com/320x180"}
-                  alt={video.title}
-                />
-              </div>
-
-              <div className="liked-video-info">
-                <h4>{video.title}</h4>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {loading && (!validVideos || validVideos.length === 0) ? (
+        <div className="hm-video-grid">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <VideoCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : validVideos.length === 0 ? (
+        <EmptyState
+          icon={<FaHeart />}
+          title="No liked videos yet"
+          description="Click the like button on any video you enjoy to build your personal library."
+          actionText="Explore Videos"
+          onAction={() => window.location.assign("/")}
+        />
+      ) : (
+        <div className="hm-video-grid">
+          {validVideos.map((video) => (
+            <VideoCard key={video._id} video={video} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

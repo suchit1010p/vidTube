@@ -1,0 +1,65 @@
+/* ==========================================================================
+   MOBILE BOTTOM NAVIGATION STYLES
+   ========================================================================== */
+
+.mb-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mb-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--mobile-nav-height);
+    background-color: var(--bg-secondary);
+    border-top: 1px solid var(--border-subtle);
+    z-index: 1000;
+    padding: 0 8px;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  .mb-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1;
+    height: 100%;
+    min-height: 44px; /* Touch target */
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.7rem;
+    font-weight: 500;
+    transition: color var(--transition-fast);
+  }
+
+  .mb-icon {
+    font-size: 1.25rem;
+  }
+
+  .mb-create-icon {
+    font-size: 2rem;
+    color: var(--accent-primary);
+  }
+
+  .mb-avatar-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+  }
+
+  .mb-active {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  .mb-active .mb-icon {
+    color: var(--accent-primary);
+  }
+}

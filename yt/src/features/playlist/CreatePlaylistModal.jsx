@@ -1,6 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { createPlaylist } from "../../store/slices/playlistSlice";
+import { FaTimes, FaPlus } from "react-icons/fa";
 import "./playlist.css";
 
 const CreatePlaylistModal = ({ onClose }) => {
@@ -25,44 +26,64 @@ const CreatePlaylistModal = ({ onClose }) => {
   };
 
   return (
-    <div className="playlist-modal-backdrop" onClick={onClose}>
-      <div className="playlist-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Create New Playlist</h3>
+    <div className="plm-backdrop" onClick={onClose}>
+      <div className="plm-card animate-fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="plm-header">
+          <h3>Create New Playlist</h3>
+          <button className="modal-close-btn" onClick={onClose} aria-label="Close">
+            <FaTimes />
+          </button>
+        </div>
 
-        <form onSubmit={handleCreate} className="create-playlist-form">
-          <div className="form-group">
-            <label htmlFor="playlistName">Name</label>
-            <input
-              id="playlistName"
-              type="text"
-              placeholder="Enter playlist name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+        <form onSubmit={handleCreate}>
+          <div className="plm-body">
+            <div className="form-input-group">
+              <label className="form-label" htmlFor="newPlaylistName">
+                Playlist Name <span style={{ color: "var(--accent-primary)" }}>*</span>
+              </label>
+              <input
+                id="newPlaylistName"
+                type="text"
+                className="form-control"
+                placeholder="e.g. Chill Beats, Coding Tutorials"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="form-input-group">
+              <label className="form-label" htmlFor="newPlaylistDesc">
+                Description (optional)
+              </label>
+              <textarea
+                id="newPlaylistDesc"
+                className="form-control"
+                placeholder="What's the purpose of this playlist?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="playlistDesc">Description (optional)</label>
-            <textarea
-              id="playlistDesc"
-              placeholder="Enter playlist description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          <div className="modal-actions">
-            <button type="button" onClick={onClose} className="cancel-btn">
+          <div className="plm-footer">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </button>
             <button
               type="submit"
-              className="create-btn"
+              className="btn btn-primary btn-sm"
               disabled={isSubmitting || !name.trim()}
             >
-              {isSubmitting ? "Creating..." : "Create"}
+              <FaPlus size={11} />
+              <span>{isSubmitting ? "Creating..." : "Create Playlist"}</span>
             </button>
           </div>
         </form>

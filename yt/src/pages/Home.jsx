@@ -1,200 +1,166 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchVideos } from "../store/slices/videoSlice";
+import VideoCard from "../components/common/VideoCard";
+import VideoCardSkeleton from "../components/common/VideoCardSkeleton";
+import EmptyState from "../components/common/EmptyState";
+import { FaVideoSlash, FaSearch, FaExclamationTriangle } from "react-icons/fa";
 import "./styles/home.css";
 
-const Home = () => {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+const CATEGORY_CHIPS = [
+  { id: "all", label: "All", sortBy: "createdAt", sortType: "desc" },
+  { id: "latest", label: "Newest", sortBy: "createdAt", sortType: "desc" },
+  { id: "views", label: "Most Viewed", sortBy: "views", sortType: "desc" },
+  { id: "title", label: "By Title", sortBy: "title", sortType: "asc" },
+];
 
+const Home = () => {
+  const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const searchQuery = searchParams.get("query") || "";
+  const [activeChip, setActiveChip] = useState("all");
   const [page, setPage] = useState(1);
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortType, setSortType] = useState("desc");
 
   const { videos, totalPages, currentPage, loading, error } = useSelector(
     (state) => state.video
   );
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(1);
-      setSearchQuery(searchInput);
-    }, 400);
+  // Selected sort configuration from chips
+  const currentChip = CATEGORY_CHIPS.find((c) => c.id === activeChip) || CATEGORY_CHIPS[0];
 
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  // Fetch videos when page, search, or sorting parameters change
   useEffect(() => {
     dispatch(
       fetchVideos({
         page,
-        limit: 8,
+        limit: 12,
         query: searchQuery || undefined,
-        sortBy,
-        sortType,
+        sortBy: currentChip.sortBy,
+        sortType: currentChip.sortType,
       })
     );
-  }, [dispatch, page, searchQuery, sortBy, sortType]);
+  }, [dispatch, page, searchQuery, activeChip]);
 
-  const timeAgo = (date) => {
-    if (!date) return "";
-    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + " years ago";
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + " months ago";
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + " days ago";
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + " hours ago";
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + " minutes ago";
-    return Math.max(Math.floor(seconds), 0) + " seconds ago";
+  const handleChipClick = (chip) => {
+    setActiveChip(chip.id);
+    setPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchParams({});
+    setPage(1);
   };
 
   return (
-    <div className="home">
-      {/* SEARCH & SORT BAR */}
-      <div className="home-controls">
-        <div className="search-wrapper">
-          <input
-            type="text"
-            placeholder="Search videos..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <button className="search-btn" title="Search">🔍</button>
+    <div className="hm-container">
+      {/* FILTER CHIPS & ACTIVE SEARCH TAG */}
+      <div className="hm-filter-bar">
+        <div className="hm-chips-scroll">
+          {CATEGORY_CHIPS.map((chip) => (
+            <button
+              key={chip.id}
+              className={`hm-chip ${activeChip === chip.id ? "hm-chip-active" : ""}`}
+              onClick={() => handleChipClick(chip)}
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
 
-        <div className="filter-wrapper">
-          <select
-            value={sortBy}
-            onChange={(e) => {
-              setPage(1);
-              setSortBy(e.target.value);
-            }}
-          >
-            <option value="createdAt">Newest</option>
-            <option value="views">Most Viewed</option>
-            <option value="title">Title</option>
-          </select>
-
-          <select
-            value={sortType}
-            onChange={(e) => {
-              setPage(1);
-              setSortType(e.target.value);
-            }}
-          >
-            <option value="desc">Descending</option>
-            <option value="asc">Ascending</option>
-          </select>
-        </div>
+        {searchQuery && (
+          <div className="hm-search-tag">
+            <FaSearch size={12} />
+            <span>Search: &ldquo;{searchQuery}&rdquo;</span>
+            <button
+              className="hm-clear-search-btn"
+              onClick={handleClearSearch}
+              title="Clear search filter"
+            >
+              ×
+            </button>
+          </div>
+        )}
       </div>
 
-      {loading && (
-        <div className="loading-state" style={{ textAlign: "center", padding: "40px" }}>
-          <h3>Loading videos...</h3>
-        </div>
-      )}
-
+      {/* ERROR STATE */}
       {error && !loading && (
-        <div className="error-state" style={{ textAlign: "center", padding: "40px", color: "#e74c3c" }}>
-          <h3>{error}</h3>
+        <div className="hm-error-wrapper animate-fade-in">
+          <FaExclamationTriangle className="hm-error-icon" />
+          <h3>Unable to load videos</h3>
+          <p>{error}</p>
           <button
+            className="btn btn-secondary btn-sm"
             onClick={() =>
               dispatch(
                 fetchVideos({
                   page,
-                  limit: 8,
+                  limit: 12,
                   query: searchQuery || undefined,
-                  sortBy,
-                  sortType,
+                  sortBy: currentChip.sortBy,
+                  sortType: currentChip.sortType,
                 })
               )
             }
-            style={{ marginTop: "12px", padding: "8px 16px", cursor: "pointer" }}
           >
-            Retry
+            Try Again
           </button>
         </div>
       )}
 
-      {/* VIDEO GRID */}
+      {/* LOADING SKELETON GRID */}
+      {loading && (
+        <div className="hm-video-grid">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <VideoCardSkeleton key={`skeleton-${idx}`} />
+          ))}
+        </div>
+      )}
+
+      {/* CONTENT GRID */}
       {!loading && !error && (
         <>
-          {videos.length === 0 ? (
-            <div className="no-videos" style={{ textAlign: "center", padding: "60px 20px" }}>
-              <h3>No videos found</h3>
-              <p style={{ color: "#888", marginTop: "8px" }}>
-                Try adjusting your search or upload a video to get started.
-              </p>
-            </div>
+          {(!videos || videos.length === 0) ? (
+            <EmptyState
+              icon={<FaVideoSlash />}
+              title={searchQuery ? "No matching videos found" : "No videos available yet"}
+              description={
+                searchQuery
+                  ? "Try searching for a different keyword or explore our latest uploads."
+                  : "Be the first creator to share your story on VidPlay."
+              }
+              actionText={searchQuery ? "Clear Search" : "Upload Video"}
+              onAction={
+                searchQuery
+                  ? handleClearSearch
+                  : () => window.location.assign("/publish-video")
+              }
+            />
           ) : (
-            <div className="video-grid">
+            <div className="hm-video-grid">
               {videos.map((video) => (
-                <div
-                  key={video._id}
-                  className="video-card"
-                  onClick={() => navigate(`/video/${video._id}`)}
-                >
-                  <div className="thumbnail-container">
-                    <img
-                      src={video.thumbnail}
-                      alt={video.title}
-                      className="video-thumbnail"
-                    />
-                    <span className="duration-badge">
-                      {video.duration ? (video.duration / 60).toFixed(2) : "10:00"}
-                    </span>
-                  </div>
-
-                  <div className="video-details">
-                    <div className="channel-avatar">
-                      <img
-                        src={video.owner?.avatar || "https://via.placeholder.com/40"}
-                        alt="avatar"
-                      />
-                    </div>
-                    <div className="video-meta">
-                      <h4 title={video.title}>
-                        {video.title.length > 50
-                          ? video.title.slice(0, 50) + "..."
-                          : video.title}
-                      </h4>
-                      <p className="channel-name">
-                        {video.owner?.fullName || "Unknown Channel"}
-                      </p>
-                      <p className="video-stats">
-                        {timeAgo(video.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <VideoCard key={video._id} video={video} />
               ))}
             </div>
           )}
 
-          {/* PAGINATION */}
+          {/* PAGINATION CONTROLS */}
           {totalPages > 1 && (
-            <div className="pagination">
+            <div className="hm-pagination">
               <button
-                disabled={currentPage === 1}
+                className="btn btn-secondary btn-sm"
+                disabled={currentPage <= 1}
                 onClick={() => setPage((p) => Math.max(p - 1, 1))}
               >
-                Prev
+                Previous
               </button>
 
-              <span>
+              <span className="hm-page-indicator">
                 Page {currentPage} of {totalPages}
               </span>
 
               <button
+                className="btn btn-secondary btn-sm"
                 disabled={currentPage >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >

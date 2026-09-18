@@ -1,15 +1,25 @@
-import { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchChannelProfile } from "../store/slices/channelSlice";
 import { toggleSubscription } from "../store/slices/subscriptionSlice";
+import VideoCard from "../components/common/VideoCard";
+import EmptyState from "../components/common/EmptyState";
+import {
+  FaBell,
+  FaCheck,
+  FaVideo,
+  FaCalendarAlt,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 import "./styles/channel.css";
-import "./styles/home.css";
 
 const Channel = () => {
   const { username } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const [activeTab, setActiveTab] = useState("videos");
 
   const { channel, loading, error } = useSelector((state) => state.channel);
   const { user: currentUser } = useSelector((state) => state.auth);
@@ -32,20 +42,20 @@ const Channel = () => {
 
   if (loading && !channel) {
     return (
-      <div style={{ textAlign: "center", padding: "80px 20px" }}>
-        <h2>Loading channel...</h2>
+      <div className="ch-loading-wrapper">
+        <div className="skeleton ch-cover-skeleton" />
+        <div className="skeleton" style={{ width: "300px", height: "80px", margin: "20px 0" }} />
       </div>
     );
   }
 
   if (error || !channel) {
     return (
-      <div style={{ textAlign: "center", padding: "80px 20px" }}>
+      <div className="ch-error-wrapper animate-fade-in">
+        <FaExclamationTriangle className="ch-error-icon" />
         <h2>Channel not found</h2>
-        <button
-          onClick={() => navigate("/")}
-          style={{ marginTop: "16px", padding: "8px 16px", cursor: "pointer" }}
-        >
+        <p>The channel @{username} doesn&rsquo;t exist or is currently unavailable.</p>
+        <button className="btn btn-primary" onClick={() => navigate("/")}>
           Return Home
         </button>
       </div>
@@ -55,62 +65,136 @@ const Channel = () => {
   const isOwnChannel = currentUser?._id && currentUser._id === channel._id;
 
   return (
-    <div className="channel-page">
-      <div
-        className="channel-cover"
-        style={{
-          backgroundImage: `url(${channel.coverImage || "https://via.placeholder.com/1200x300?text=Cover"})`,
-        }}
-      />
-
-      <div className="channel-header">
+    <div className="ch-container animate-fade-in">
+      {/* CHANNEL COVER BANNER */}
+      <div className="ch-cover-wrapper">
         <img
-          src={channel.avatar || "https://via.placeholder.com/100"}
-          alt={channel.username}
+          src={
+            channel.coverImage ||
+            "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=1600&q=80"
+          }
+          alt="cover"
+          className="ch-cover-img"
         />
-        <div className="channel-info">
-          <h2>{channel.fullName}</h2>
-          <p>@{channel.username}</p>
-          <p>{channel.subscribersCount || 0} subscribers</p>
+        <div className="ch-cover-overlay" />
+      </div>
+
+      {/* CHANNEL IDENTITY ROW */}
+      <div className="ch-header">
+        <div className="ch-avatar-wrapper">
+          <img
+            src={
+              channel.avatar ||
+              `https://api.dicebear.com/7.x/initials/svg?seed=${channel.fullName || "User"}`
+            }
+            alt={channel.username}
+            className="ch-avatar-img"
+          />
+        </div>
+
+        <div className="ch-meta">
+          <h1 className="ch-name">{channel.fullName}</h1>
+          <span className="ch-handle">@{channel.username}</span>
+          <div className="ch-sub-counts">
+            <span>{channel.subscribersCount || 0} subscribers</span>
+            <span className="ch-dot">•</span>
+            <span>{channel.videos?.length || 0} videos</span>
+          </div>
         </div>
 
         {!isOwnChannel && (
-          <button
-            className={channel.isSubscribed ? "subscribed" : "subscribe"}
-            onClick={handleToggleSub}
-          >
-            {channel.isSubscribed ? "Subscribed" : "Subscribe"}
-          </button>
-        )}
-      </div>
-
-      {/* VIDEOS */}
-      <div className="video-grid" style={{ marginTop: "30px" }}>
-        {(!channel.videos || channel.videos.length === 0) ? (
-          <div style={{ textAlign: "center", gridColumn: "1 / -1", padding: "40px" }}>
-            <p>No videos uploaded by this channel yet.</p>
-          </div>
-        ) : (
-          channel.videos.map((video) => (
-            <div
-              key={video._id}
-              className="video-card"
-              onClick={() => navigate(`/video/${video._id}`)}
+          <div className="ch-actions">
+            <button
+              className={`btn ${
+                channel.isSubscribed
+                  ? "btn-secondary ch-subscribed-btn"
+                  : "btn-primary ch-subscribe-btn"
+              }`}
+              onClick={handleToggleSub}
             >
-              <img
-                src={video.thumbnail}
-                alt={video.title}
-                className="video-thumbnail"
-              />
-
-              <div className="video-info" style={{ padding: "10px" }}>
-                <h4>{video.title}</h4>
-                <p>{video.views || 0} views</p>
-              </div>
-            </div>
-          ))
+              {channel.isSubscribed ? (
+                <>
+                  <FaBell size={13} />
+                  <span>Subscribed</span>
+                </>
+              ) : (
+                <span>Subscribe</span>
+              )}
+            </button>
+          </div>
         )}
       </div>
+
+      {/* NAVIGATION TABS */}
+      <div className="ch-tabs-bar">
+        <button
+          className={`ch-tab-btn ${activeTab === "videos" ? "ch-tab-active" : ""}`}
+          onClick={() => setActiveTab("videos")}
+        >
+          Videos
+        </button>
+        <button
+          className={`ch-tab-btn ${activeTab === "about" ? "ch-tab-active" : ""}`}
+          onClick={() => setActiveTab("about")}
+        >
+          About
+        </button>
+      </div>
+
+      {/* TAB CONTENT: VIDEOS */}
+      {activeTab === "videos" && (
+        <div className="ch-tab-content">
+          {(!channel.videos || channel.videos.length === 0) ? (
+            <EmptyState
+              icon={<FaVideo />}
+              title="No videos uploaded yet"
+              description={`@${channel.username} hasn’t uploaded any public videos.`}
+            />
+          ) : (
+            <div className="hm-video-grid">
+              {channel.videos.map((video) => (
+                <VideoCard
+                  key={video._id}
+                  video={{
+                    ...video,
+                    owner: {
+                      _id: channel._id,
+                      fullName: channel.fullName,
+                      username: channel.username,
+                      avatar: channel.avatar,
+                    },
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB CONTENT: ABOUT */}
+      {activeTab === "about" && (
+        <div className="ch-about-card">
+          <h3>Channel Details</h3>
+          <div className="ch-about-item">
+            <span className="ch-about-label">Creator</span>
+            <span className="ch-about-val">{channel.fullName} (@{channel.username})</span>
+          </div>
+          <div className="ch-about-item">
+            <span className="ch-about-label">Total Subscribers</span>
+            <span className="ch-about-val">{(channel.subscribersCount || 0).toLocaleString()}</span>
+          </div>
+          <div className="ch-about-item">
+            <span className="ch-about-label">Total Videos</span>
+            <span className="ch-about-val">{(channel.videos?.length || 0).toLocaleString()}</span>
+          </div>
+          {channel.email && (
+            <div className="ch-about-item">
+              <span className="ch-about-label">Business Inquiries</span>
+              <span className="ch-about-val">{channel.email}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,164 @@
+/* ==========================================================================
+   VIDEO CARD COMPONENT STYLES
+   ========================================================================== */
+
+.vc-card {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  position: relative;
+  transition: transform var(--transition-normal);
+  user-select: none;
+}
+
+/* Grid Layout (Home, Channel, etc.) */
+.vc-grid {
+  gap: 12px;
+}
+
+.vc-thumb-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: var(--bg-surface);
+}
+
+.vc-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease, opacity 0.2s ease;
+}
+
+.vc-card:hover .vc-thumb {
+  transform: scale(1.03);
+}
+
+.vc-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.4) 100%);
+  pointer-events: none;
+}
+
+.vc-duration-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background-color: rgba(11, 11, 14, 0.85);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.02em;
+}
+
+.vc-details {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.vc-avatar-col {
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+.vc-avatar-col:hover {
+  opacity: 0.85;
+}
+
+.vc-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  background-color: var(--bg-surface-elevated);
+}
+
+.vc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.vc-title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color var(--transition-fast);
+}
+
+.vc-card:hover .vc-title {
+  color: var(--accent-primary);
+}
+
+.vc-channel {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vc-channel:hover {
+  color: var(--text-primary);
+}
+
+.vc-stats {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vc-dot {
+  font-size: 0.6rem;
+  opacity: 0.7;
+}
+
+/* Compact Layout (Sidebar Recommendations, Queue) */
+.vc-compact {
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.vc-compact .vc-thumb-wrapper {
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.vc-compact .vc-title {
+  font-size: 0.88rem;
+  -webkit-line-clamp: 2;
+}
+
+.vc-compact .vc-channel {
+  font-size: 0.78rem;
+}
+
+.vc-compact .vc-stats {
+  font-size: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .vc-grid .vc-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  .vc-title {
+    font-size: 0.9rem;
+  }
+}

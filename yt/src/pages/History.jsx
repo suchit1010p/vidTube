@@ -1,66 +1,63 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchWatchHistory } from "../store/slices/historySlice";
+import VideoCard from "../components/common/VideoCard";
+import VideoCardSkeleton from "../components/common/VideoCardSkeleton";
+import EmptyState from "../components/common/EmptyState";
+import { FaHistory } from "react-icons/fa";
 import "./styles/history.css";
 
 const History = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
-
-  const { history, loading } = useSelector((state) => state.history);
+  const { history, loading, error } = useSelector((state) => state.history);
 
   useEffect(() => {
     dispatch(fetchWatchHistory());
   }, [dispatch]);
 
-  if (loading && (!history || history.length === 0)) {
-    return (
-      <div className="history-loading" style={{ textAlign: "center", padding: "80px 20px" }}>
-        <h2>Loading watch history...</h2>
-      </div>
-    );
-  }
+  const validVideos = (history || [])
+    .map((item) => item.video || item)
+    .filter((v) => v && v._id);
 
   return (
-    <div className="history-page">
-      <h2>Watch History</h2>
+    <div className="hs-container animate-fade-in">
+      <div className="hs-header">
+        <div className="hs-header-icon-wrapper">
+          <FaHistory className="hs-header-icon" />
+        </div>
+        <div>
+          <h1 className="hs-title">Watch History</h1>
+          <p className="hs-subtitle">Videos you have previously watched on VidPlay</p>
+        </div>
+      </div>
 
-      {(!history || history.length === 0) && (
-        <div className="no-history" style={{ textAlign: "center", padding: "60px 20px" }}>
-          <p>You haven't watched any videos yet.</p>
+      {error && (
+        <div className="pv-error-alert" style={{ marginBottom: "16px" }}>
+          {error}
         </div>
       )}
 
-      <div className="history-grid">
-        {history?.map((item, index) => {
-          const video = item.video || item;
-          if (!video?._id) return null;
-
-          return (
-            <div
-              key={`${video._id}-${index}`}
-              className="history-video-card"
-              onClick={() => navigate(`/video/${video._id}`)}
-              title={video.title}
-            >
-              <div className="history-thumb-wrapper">
-                <img
-                  src={video.thumbnail || "https://via.placeholder.com/320x180"}
-                  alt={video.title}
-                />
-              </div>
-
-              <div className="history-video-info">
-                <h4>{video.title}</h4>
-                <p className="history-channel-name">
-                  {video.owner?.fullName || "Creator"}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {loading && (!validVideos || validVideos.length === 0) ? (
+        <div className="hm-video-grid">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <VideoCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : validVideos.length === 0 ? (
+        <EmptyState
+          icon={<FaHistory />}
+          title="No watch history"
+          description="Videos that you watch will automatically be recorded here for easy rewatching."
+          actionText="Browse Home"
+          onAction={() => window.location.assign("/")}
+        />
+      ) : (
+        <div className="hm-video-grid">
+          {validVideos.map((video, idx) => (
+            <VideoCard key={`${video._id}-${idx}`} video={video} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
